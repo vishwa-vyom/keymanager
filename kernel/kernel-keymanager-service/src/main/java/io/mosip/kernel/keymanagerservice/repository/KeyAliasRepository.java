@@ -1,6 +1,5 @@
 package io.mosip.kernel.keymanagerservice.repository;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.stereotype.Repository;
@@ -17,13 +16,16 @@ import io.mosip.kernel.keymanagerservice.entity.KeyAlias;
  *
  */
 @Repository
-public interface KeymanagerRepository extends BaseRepository<KeyAlias, String> {
+public interface KeyAliasRepository extends BaseRepository<KeyAlias, String> {
 
-	List<KeyAlias> findByApplicationId(String applicationId);
-
+	/**
+	 * Function to find keyalias by applicationId and referenceId
+	 * 
+	 * @param applicationId
+	 *            applicationId
+	 * @param referenceId
+	 *            referenceId
+	 * @return list of keyalias
+	 */
 	List<KeyAlias> findByApplicationIdAndReferenceId(String applicationId, String referenceId);
-
-	List<KeyAlias> findByApplicationIdAndReferenceIdAndKeyGenerationTimeLessThanEqual(String applicationId,
-			String referenceId, LocalDateTime keyGenerationTime);
-
 }
