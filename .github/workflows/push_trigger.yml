@@ -317,7 +317,7 @@ jobs:
 
 
 
-  Sonar Analysis:
+  Sonar_Analysis:
 
     runs-on: ubuntu-latest
 
