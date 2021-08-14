@@ -170,4 +170,9 @@ public class KeymanagerConstant {
 	public static final String GENERATE_SUCCESS = "Generation Success";
 
 	public static final String SYMM_KEY_EXISTS = "Key Exists.";
+
+	public static final String VALID_REFERENCE_ID_GETTING_KEY_ALIAS_WITH_REFERENCE_ID = "Valid reference Id. Getting key alias with referenceId";
+
+	public static final String NOT_A_VALID_REFERENCE_ID_GETTING_KEY_ALIAS_WITHOUT_REFERENCE_ID = "Not a valid reference Id. Getting key alias without referenceId";
+
 }
