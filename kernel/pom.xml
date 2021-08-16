@@ -31,7 +31,6 @@
 	<modules>
 		<module>kernel-keymanager-service</module>
 		<module>keys-generator</module>
-		<module>keys-migrator</module>
 	</modules>
 
 	
@@ -80,14 +79,6 @@
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-javadoc-plugin</artifactId>
-					<version>${maven.javadoc.version}</version>
-					<configuration>
-           				<doclint>none</doclint>
-       				</configuration>
-				</plugin>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-jar-plugin</artifactId>
 					<version>${maven.jar.plugin.version}</version>
 					<configuration>
@@ -120,15 +111,6 @@
 						</archive>
 					</configuration>
 				</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-javadoc-plugin</artifactId>
-				<version>${maven.javadoc.version}</version>
-				<configuration>
-					<aggregate>true</aggregate>
-					<doclint>none</doclint>
-				</configuration>
-			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
