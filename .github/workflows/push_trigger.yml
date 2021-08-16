@@ -135,7 +135,7 @@ jobs:
         status: ${{ job.status }}
         fields: repo,message,commit,author,action,eventName,ref,workflow,job,took # selectable (default: repo,message)
       env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }} # required
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_DEVOPS_WEBHOOK }} # required
       if: failure() # Pick up events even if the job fails or is canceled.
 
 
@@ -196,7 +196,7 @@ jobs:
           status: ${{ job.status }}
           fields: repo,message,commit,author,action,eventName,ref,workflow,job,took # selectable (default: repo,message)
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }} # required
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_DEVOPS_WEBHOOK }} # required
         if: failure() # Pick up events even if the job fails or is canceled.
 
 
@@ -255,7 +255,7 @@ jobs:
           status: ${{ job.status }}
           fields: repo,message,commit,author,action,eventName,ref,workflow,job,took # selectable (default: repo,message)
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }} # required
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_DEVOPS_WEBHOOK}} # required
         if: failure() # Pick up events even if the job fails or is canceled.
 
   Sonar_Analysis:
@@ -314,5 +314,5 @@ jobs:
           status: ${{ job.status }}
           fields: repo,message,commit,author,action,eventName,ref,workflow,job,took # selectable (default: repo,message)
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }} # required
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_DEVOPS_WEBHOOK }} # required
         if: failure() # Pick up events even if the job fails or is canceled.
