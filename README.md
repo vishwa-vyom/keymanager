@@ -81,8 +81,6 @@ Once keys are associated with their user, you can perform a range of key managem
 * Digital signing of data using Module key
 * Data encryption using Encryption key
 
-![](_images/key_db_example.png)
-
 The different key in MOSIP have their own built-in validity as mentioned:
 
 *	MOSIP root key - 5 years
