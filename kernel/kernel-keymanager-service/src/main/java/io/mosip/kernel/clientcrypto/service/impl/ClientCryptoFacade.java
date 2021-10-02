@@ -9,8 +9,6 @@ import io.mosip.kernel.core.exception.ExceptionUtils;
 import io.mosip.kernel.core.logger.spi.Logger;
 import io.mosip.kernel.keymanagerservice.logger.KeymanagerLogger;
 
-import org.junit.Assert;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
@@ -130,9 +128,8 @@ public class ClientCryptoFacade {
     }
 
     public byte[] decrypt(byte[] dataToDecrypt) {
-        Assert.assertNotNull(getClientSecurity());
         byte[] encryptedSecretKey = Arrays.copyOfRange(dataToDecrypt, 0, symmetricKeyLength);
-        byte[] secretKeyBytes = getClientSecurity().asymmetricDecrypt(encryptedSecretKey);
+        byte[] secretKeyBytes =  Objects.requireNonNull(getClientSecurity()).asymmetricDecrypt(encryptedSecretKey);
         byte[] iv = Arrays.copyOfRange(dataToDecrypt, symmetricKeyLength, symmetricKeyLength+ivLength);
         byte[] aad = Arrays.copyOfRange(dataToDecrypt, symmetricKeyLength + ivLength, symmetricKeyLength+ivLength+aadLength);
         byte[] cipher = Arrays.copyOfRange(dataToDecrypt, symmetricKeyLength + ivLength + aadLength,
