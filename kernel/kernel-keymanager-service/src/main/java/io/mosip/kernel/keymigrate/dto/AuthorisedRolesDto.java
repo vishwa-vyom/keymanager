@@ -15,7 +15,6 @@ import lombok.Setter;
 @Setter
 public class AuthorizedRolesDTO {
 
-   	##keymigratorcontroller
 	
 	private List<String> postmigratebasekey;
 	

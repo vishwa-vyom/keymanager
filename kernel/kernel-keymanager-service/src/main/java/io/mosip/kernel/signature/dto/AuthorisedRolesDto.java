@@ -16,7 +16,6 @@ import lombok.Setter;
 public class AuthorizedRolesDTO {
 
 
-	##signaturecontroller
 	
 	private List<String> postsign;
 	

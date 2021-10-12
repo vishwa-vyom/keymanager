@@ -15,7 +15,6 @@ import lombok.Setter;
 @Setter
 public class AuthorizedRolesDTO {
 
-    ##clientcrypto controller
     private List<String> postcssign;
     
     private List<String> postcsverifysign;

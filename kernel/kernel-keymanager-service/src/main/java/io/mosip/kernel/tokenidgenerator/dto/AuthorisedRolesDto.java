@@ -15,8 +15,6 @@ import lombok.Setter;
 @Setter
 public class AuthorizedRolesDTO {
 
-	##tokenidgenerator controller
-	
 	private List<String> getuinpartnercode;
 	
 

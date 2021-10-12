@@ -15,8 +15,7 @@ import lombok.Setter;
 @Setter
 public class AuthorizedRolesDTO {
 
-	##keymanager controller
-	
+
 	private List<String> postgeneratemasterkeyobjecttype;
 	
 	private List<String> getgetcertificate;

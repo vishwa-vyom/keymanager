@@ -16,8 +16,6 @@ import lombok.Setter;
 public class AuthorizedRolesDTO {
 
 
-	##partnercertmanagercontroller
-	
 	private List<String> postuploadcacertificate;
 	
 	private List<String> postuploadpartnercertificate;

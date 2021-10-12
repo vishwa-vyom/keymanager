@@ -15,7 +15,7 @@ import lombok.Setter;
 @Setter
 public class AuthorizedRolesDTO {
 
-	##cryptomanager controller
+
 	private List<String> postencrypt;
 		  
     private List<String> postdecrypt;

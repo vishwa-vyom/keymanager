@@ -16,8 +16,6 @@ import lombok.Setter;
 public class AuthorizedRolesDTO {
 
 	
-	##zkcryptomanager controller
-	
 	private List<String> postzkencrypt;
 	
 	private List<String> postzkdecrypt;
