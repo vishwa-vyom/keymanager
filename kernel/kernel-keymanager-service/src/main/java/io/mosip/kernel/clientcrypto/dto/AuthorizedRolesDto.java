@@ -26,6 +26,5 @@ public class AuthorizedRolesDTO {
 	private List<String> posttpmsigningpublickey;
 	
     private List<String> posttpmencryptionpublickey;	
-	
-	}
+
 }

@@ -16,7 +16,5 @@ import lombok.Setter;
 public class AuthorizedRolesDTO {
 
 	private List<String> getuinpartnercode;
-	
 
-}
 }

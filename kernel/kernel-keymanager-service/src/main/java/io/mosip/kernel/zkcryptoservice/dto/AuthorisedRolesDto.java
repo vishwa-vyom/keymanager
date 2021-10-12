@@ -13,14 +13,13 @@ import lombok.Setter;
 @ConfigurationProperties(prefix = "mosip.role.keymanager")
 @Getter
 @Setter
-public class AuthorizedRolesDTO {
+public class AuthorizedRolesDTO
+{
 
-	
 	private List<String> postzkencrypt;
 	
 	private List<String> postzkdecrypt;
 	
 	private List<String> postzkreencryptrandomkey;
 
-}
 }

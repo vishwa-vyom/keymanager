@@ -13,10 +13,9 @@ import lombok.Setter;
 @ConfigurationProperties(prefix = "mosip.role.keymanager")
 @Getter
 @Setter
-public class AuthorizedRolesDTO {
+public class AuthorizedRolesDTO
+{
 
-
-	
 	private List<String> postsign;
 	
 	private List<String> postvalidate;
@@ -26,6 +25,4 @@ public class AuthorizedRolesDTO {
 	private List<String> postjwtsign;
 	
 	private List<String> postjwtverify;
-	
-	}
 }

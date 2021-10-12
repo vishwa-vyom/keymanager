@@ -15,7 +15,6 @@ import lombok.Setter;
 @Setter
 public class AuthorizedRolesDTO {
 
-
 	private List<String> postgeneratemasterkeyobjecttype;
 	
 	private List<String> getgetcertificate;
@@ -29,6 +28,5 @@ public class AuthorizedRolesDTO {
 	private List<String> postgeneratesymmetrickey;
 	
 	private List<String> putrevokekey;
-	
-	}
+
 }
