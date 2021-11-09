@@ -57,7 +57,7 @@ public enum CryptomanagerErrorCode {
 
 	CERTIFICATE_THUMBPRINT_ERROR("KER-CRY-010", "Error in generating Certificate Thumbprint."),
 
-	ENCRYPT_NOT_ALLOWED_ERROR("KER-CRY-011", "Not Allowed to preform encryption with Master Key. Use Base to encrypt data."),
+	ENCRYPT_NOT_ALLOWED_ERROR("KER-CRY-011", "Not Allowed to preform encryption with Master Key. Use Base/Encrypt key to encrypt data."),
 
 	INTERNAL_SERVER_ERROR("KER-CRY-500", "Internal server error");
 

@@ -176,4 +176,16 @@ public class KeymanagerConstant {
 	public static final String KEY_REVOKED = "Key Revoked";
 
 	public static final String ENCRYPTION_KEY = "EncryptionKey";
+
+	public static final String KERNEL_APP_ID = "KERNEL";
+
+	public static final String KERNEL_IDENTIFY_CACHE = "IDENTITY_CACHE";
+
+	public static final String VALID_REFERENCE_ID_GETTING_KEY_ALIAS_WITH_REFERENCE_ID = "Valid reference Id. Getting key alias with referenceId";
+
+	public static final String NOT_A_VALID_REFERENCE_ID_GETTING_KEY_ALIAS_WITHOUT_REFERENCE_ID = "Not a valid reference Id. Getting key alias without referenceId";
+
+	public static final String PARTNER_APP_ID = "PARTNER";
+
+	public static final String HYPHEN = "-";
 }

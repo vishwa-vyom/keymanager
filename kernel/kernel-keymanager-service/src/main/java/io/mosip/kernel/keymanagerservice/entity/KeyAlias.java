@@ -64,4 +64,10 @@ public class KeyAlias extends BaseEntity {
 	@Column(name = "status_code", length = 36)
 	private String status;
 
+	/**
+	 * The field status
+	 */
+	@Column(name = "cert_thumbprint", length = 128)
+	private String certThumbprint;
+
 }
