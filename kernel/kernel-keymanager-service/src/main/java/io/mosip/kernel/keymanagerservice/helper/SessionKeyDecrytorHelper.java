@@ -14,9 +14,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.crypto.SecretKey;
 
+import org.bouncycastle.util.encoders.Hex;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -91,7 +93,11 @@ public class SessionKeyDecrytorHelper {
 	@Autowired
 	private KeyStore keyStore;
 
-    public SymmetricKeyResponseDto decryptSessionKey(SymmetricKeyRequestDto symmetricKeyRequestDto) {
+	private Map<String, io.mosip.kernel.keymanagerservice.entity.KeyStore> cacheKeyStore = new ConcurrentHashMap<>();
+
+	private Map<String, String> cacheReferenceIds = new ConcurrentHashMap<>();
+
+	public SymmetricKeyResponseDto decryptSessionKey(SymmetricKeyRequestDto symmetricKeyRequestDto) {
 		LocalDateTime localDateTimeStamp = DateUtils.getUTCCurrentDateTime();
 		String applicationId = symmetricKeyRequestDto.getApplicationId();
 		String referenceId = symmetricKeyRequestDto.getReferenceId();
@@ -130,15 +136,91 @@ public class SessionKeyDecrytorHelper {
 		byte[] certThumbprint = Arrays.copyOfRange(encryptedData, 0, CryptomanagerConstant.THUMBPRINT_LENGTH);
 		byte[] encryptedSymmetricKey = Arrays.copyOfRange(encryptedData, CryptomanagerConstant.THUMBPRINT_LENGTH, 
 									encryptedData.length);
+		String certThumbprintHex = Hex.toHexString(certThumbprint).toUpperCase();
+		io.mosip.kernel.keymanagerservice.entity.KeyStore dbKeyStore = cacheKeyStore.getOrDefault(certThumbprintHex, null);
+
+		String appIdRefIdKey = applicationId + KeymanagerConstant.HYPHEN + referenceId;
+		if(Objects.isNull(dbKeyStore)) {
+			dbKeyStore = dbHelper.getKeyAlias(certThumbprintHex, appIdRefIdKey);
+			cacheKeyStore.put(certThumbprintHex, dbKeyStore);
+			cacheReferenceIds.put(certThumbprintHex, appIdRefIdKey);
+		}
+
+		String cachedRefId = cacheReferenceIds.getOrDefault(certThumbprintHex, null);
+		if (!appIdRefIdKey.equals(cachedRefId)){
+            LOGGER.error(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
+                "Application Id & Reference ID not matching with the inputted thumbprint value(decrypt).");
+            throw new KeymanagerServiceException(KeymanagerErrorConstant.APP_ID_REFERENCE_ID_NOT_MATCHING.getErrorCode(),
+                KeymanagerErrorConstant.APP_ID_REFERENCE_ID_NOT_MATCHING.getErrorMessage());
+        }
+
 		SymmetricKeyResponseDto keyResponseDto = new SymmetricKeyResponseDto();
-		byte[] decryptedSymmetricKey = decryptSessionKeyWithKeyIdentifier(applicationId, referenceId, localDateTimeStamp, 
-										encryptedSymmetricKey, certThumbprint);
+		byte[] decryptedSymmetricKey = decryptSessionKeyWithCertificateThumbprint(dbKeyStore, encryptedSymmetricKey, referenceId);
 		keyResponseDto.setSymmetricKey(CryptoUtil.encodeBase64(decryptedSymmetricKey));
 		return keyResponseDto;
 
 	}
 
-	private byte[] decryptSessionKeyWithKeyIdentifier(String applicationId, String referenceId, LocalDateTime localDateTimeStamp, 
+	private byte[] decryptSessionKeyWithCertificateThumbprint(io.mosip.kernel.keymanagerservice.entity.KeyStore dbKeyStore, 
+			byte[] encryptedSymmetricKey, String referenceId) {
+		
+		Object[] keys = getKeyObjects(dbKeyStore);
+		PrivateKey privateKey = (PrivateKey) keys[0];
+		PublicKey publicKey = ((Certificate) keys[1]).getPublicKey();
+		try {
+			byte[] decryptedSessionKey = cryptoCore.asymmetricDecrypt(privateKey, publicKey, encryptedSymmetricKey);
+			if(keymanagerUtil.isValidReferenceId(referenceId))
+				keymanagerUtil.destoryKey(privateKey);
+			return decryptedSessionKey;
+		} catch(InvalidKeyException keyExp) {
+			LOGGER.error(KeymanagerConstant.SESSIONID, KeymanagerConstant.APPLICATIONID, KeymanagerConstant.REFERENCEID,
+						"Error occurred because of mismatch with keys. Try with keys for decryption.");
+			throw new CryptoException(KeymanagerErrorConstant.SYMMETRIC_KEY_DECRYPTION_FAILED.getErrorCode(),
+						KeymanagerErrorConstant.SYMMETRIC_KEY_DECRYPTION_FAILED.getErrorMessage() + keyExp.getMessage(), keyExp);
+		}
+	}
+
+	private Object[] getKeyObjects(io.mosip.kernel.keymanagerservice.entity.KeyStore dbKeyStore) {
+		
+		String ksAlias = dbKeyStore.getAlias();
+
+		String privateKeyObj = dbKeyStore.getPrivateKey();
+		if (Objects.isNull(privateKeyObj)) {
+			LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
+					"Private not found in key store. Getting private key from HSM.");
+			PrivateKeyEntry masterKeyEntry = keyStore.getAsymmetricKey(ksAlias);
+			PrivateKey masterPrivateKey = masterKeyEntry.getPrivateKey();
+			Certificate masterCert = masterKeyEntry.getCertificate();
+			return new Object[] {masterPrivateKey, masterCert};
+		}
+			
+		String masterKeyAlias = dbKeyStore.getMasterAlias();
+		
+		if (ksAlias.equals(masterKeyAlias) || privateKeyObj.equals(KeymanagerConstant.KS_PK_NA)) {
+			LOGGER.error(KeymanagerConstant.SESSIONID, KeymanagerConstant.APPLICATIONID, null,
+					"Not Allowed to perform decryption with other domain key.");
+			throw new KeymanagerServiceException(KeymanagerErrorConstant.DECRYPTION_NOT_ALLOWED.getErrorCode(),
+					KeymanagerErrorConstant.DECRYPTION_NOT_ALLOWED.getErrorMessage());
+		}
+		
+		PrivateKeyEntry masterKeyEntry = keyStore.getAsymmetricKey(dbKeyStore.getMasterAlias());
+		PrivateKey masterPrivateKey = masterKeyEntry.getPrivateKey();
+		PublicKey masterPublicKey = masterKeyEntry.getCertificate().getPublicKey();
+		try {
+			byte[] decryptedPrivateKey = keymanagerUtil.decryptKey(CryptoUtil.decodeBase64(dbKeyStore.getPrivateKey()), 
+												masterPrivateKey, masterPublicKey);
+			KeyFactory keyFactory = KeyFactory.getInstance(KeymanagerConstant.RSA);
+			PrivateKey privateKey = keyFactory.generatePrivate(new PKCS8EncodedKeySpec(decryptedPrivateKey));
+			Certificate certificate = keymanagerUtil.convertToCertificate(dbKeyStore.getCertificateData());
+			return new Object[] {privateKey, certificate};
+		} catch (InvalidDataException | InvalidKeyException | NullDataException | NullKeyException
+				| NullMethodException | InvalidKeySpecException | NoSuchAlgorithmException e) {
+			throw new CryptoException(KeymanagerErrorConstant.CRYPTO_EXCEPTION.getErrorCode(),
+					KeymanagerErrorConstant.CRYPTO_EXCEPTION.getErrorMessage() + e.getMessage(), e);
+		}
+	}
+
+	/* private byte[] decryptSessionKeyWithKeyIdentifier(String applicationId, String referenceId, LocalDateTime localDateTimeStamp, 
 						byte[] encryptedSymmetricKey, byte[] certThumbprint) {
 		
 		Map<String, List<KeyAlias>> keyAliasMap;
@@ -186,7 +268,7 @@ public class SessionKeyDecrytorHelper {
 			throw new CryptoException(KeymanagerErrorConstant.SYMMETRIC_KEY_DECRYPTION_FAILED.getErrorCode(),
 						KeymanagerErrorConstant.SYMMETRIC_KEY_DECRYPTION_FAILED.getErrorMessage() + keyExp.getMessage(), keyExp);
 		}
-	}
+	} */
 
 	private Object[] getKeyObjects(List<KeyAlias> keyAlias, List<KeyAlias>  currentKeyAlias, LocalDateTime timeStamp, 
 				String referenceId,  byte[] reqCertThumbprint, String applicationId) {

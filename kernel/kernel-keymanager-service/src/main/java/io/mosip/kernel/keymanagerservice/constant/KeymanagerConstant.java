@@ -175,4 +175,9 @@ public class KeymanagerConstant {
 
 	public static final String NOT_A_VALID_REFERENCE_ID_GETTING_KEY_ALIAS_WITHOUT_REFERENCE_ID = "Not a valid reference Id. Getting key alias without referenceId";
 
+	public static final String HYPHEN = "-";
+
+	public static final String KERNEL_APP_ID = "KERNEL";
+
+	public static final String KERNEL_IDENTIFY_CACHE = "IDENTITY_CACHE";
 }

@@ -17,6 +17,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.bouncycastle.util.encoders.Hex;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
@@ -176,6 +177,10 @@ public class CryptomanagerUtils {
             decodedBytes[i] = (byte) (f & 0xFF);
         }
         return decodedBytes;
+	}
+
+	public String getCertificateThumbprintInHex(Certificate cert) {
+        return Hex.toHexString(getCertificateThumbprint(cert)).toUpperCase();
 	}
 
 	public byte[] getCertificateThumbprint(Certificate cert) {
