@@ -31,7 +31,7 @@ public class KeymanagerConfig {
 	}
 
 	// TODO: Logging To Be removed - added temporarily
-	@Bean
+	/* @Bean
 	public CommonsRequestLoggingFilter logFilter() {
 		CommonsRequestLoggingFilter filter = new CommonsRequestLoggingFilter();
 		filter.setIncludeQueryString(true);
@@ -40,5 +40,5 @@ public class KeymanagerConfig {
 		filter.setIncludeHeaders(true);
 		filter.setAfterMessagePrefix("REQUEST DATA : ");
 		return filter;
-	}
+	} */
 }

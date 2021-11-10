@@ -161,7 +161,7 @@ public class KeymanagerServiceImpl implements KeymanagerService {
 			throw new KeymanagerServiceException(KeymanagerErrorConstant.KEY_GENERATION_NOT_DONE.getErrorCode(),
 					KeymanagerErrorConstant.KEY_GENERATION_NOT_DONE.getErrorMessage());
 		}
-
+		X509Certificate x509Cert = null;
 		if (currentKeyAlias.size() > 1) {
 			LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.CURRENTKEYALIAS,
 					String.valueOf(currentKeyAlias.size()), "CurrentKeyAlias size more than one Throwing exception");
@@ -172,18 +172,18 @@ public class KeymanagerServiceImpl implements KeymanagerService {
 					currentKeyAlias.get(0).getAlias(), "CurrentKeyAlias size is one fetching keypair using this alias");
 			KeyAlias fetchedKeyAlias = currentKeyAlias.get(0);
 			alias = fetchedKeyAlias.getAlias();
+			x509Cert = (X509Certificate) keyStore.getCertificate(alias);
 		} else if (currentKeyAlias.isEmpty()) {
 			LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.CURRENTKEYALIAS,
 					String.valueOf(currentKeyAlias.size()),
 					"CurrentKeyAlias size is zero. Will create new Keypair for this applicationId and timestamp");
 			alias = UUID.randomUUID().toString();
-			generateKeyPairInHSM(alias, applicationId, referenceId, timeStamp, keyAlias);
+			x509Cert = generateKeyPairInHSM(alias, applicationId, referenceId, timeStamp, keyAlias);
 		}
-		X509Certificate x509Cert = (X509Certificate) keyStore.getCertificate(alias);
 		return new CertificateInfo<>(alias, x509Cert);
 	}
 
-	private void generateKeyPairInHSM(String alias, String applicationId, String referenceId, 
+	private X509Certificate generateKeyPairInHSM(String alias, String applicationId, String referenceId, 
 							LocalDateTime timeStamp, List<KeyAlias> keyAlias) {
 		LocalDateTime generationDateTime = timeStamp;
 		LocalDateTime expiryDateTime = dbHelper.getExpiryPolicy(applicationId, generationDateTime, keyAlias);
@@ -192,9 +192,11 @@ public class KeymanagerServiceImpl implements KeymanagerService {
 		CertificateParameters certParams = keymanagerUtil.getCertificateParameters(latestCertPrincipal,
 				generationDateTime, expiryDateTime);
 		keyStore.generateAndStoreAsymmetricKey(alias, rootKeyAlias, certParams);
-		dbHelper.storeKeyInAlias(applicationId, generationDateTime, referenceId, alias, expiryDateTime);
+		X509Certificate x509Cert = (X509Certificate) keyStore.getCertificate(alias);
+		String certThumbprint = cryptomanagerUtil.getCertificateThumbprintInHex(x509Cert);
+		dbHelper.storeKeyInAlias(applicationId, generationDateTime, referenceId, alias, expiryDateTime, certThumbprint);
+		return x509Cert;
 	}
-
 
 	private X500Principal getLatestCertPrincipal(List<KeyAlias> keyAlias) {
 		KeyAlias latestKeyAlias = keyAlias.get(0);
@@ -318,7 +320,8 @@ public class KeymanagerServiceImpl implements KeymanagerService {
 						certParams, signerPrincipal, signAlgorithm, keyStore.getKeystoreProviderName());;
 			String certificateData = keymanagerUtil.getPEMFormatedData(x509Cert);
 			dbHelper.storeKeyInDBStore(alias, masterAlias, certificateData, encryptedPrivateKey);
-			dbHelper.storeKeyInAlias(applicationId, generationDateTime, referenceId, alias, expiryDateTime);
+			String certThumbprint = cryptomanagerUtil.getCertificateThumbprintInHex(x509Cert);
+			dbHelper.storeKeyInAlias(applicationId, generationDateTime, referenceId, alias, expiryDateTime, certThumbprint);
 			keymanagerUtil.destoryKey(privateKey);
 		}
 		return new CertificateInfo<>(alias, x509Cert);
@@ -492,7 +495,7 @@ public class KeymanagerServiceImpl implements KeymanagerService {
 					"Force Flag is True, invalidating all the existing keys and generating new key pair.");
 			LocalDateTime expireTime = timestamp.minusMinutes(1L);
 			currentKeyAlias.forEach(alias -> {
-				dbHelper.storeKeyInAlias(appId, alias.getKeyGenerationTime(), refId, alias.getAlias(), expireTime);
+				dbHelper.storeKeyInAlias(appId, alias.getKeyGenerationTime(), refId, alias.getAlias(), expireTime, alias.getCertThumbprint());
 			});
 			return generateAndBuildResponse(responseObjectType, appId, refId, timestamp, keyAliasMap, request);
 		}
@@ -525,7 +528,9 @@ public class KeymanagerServiceImpl implements KeymanagerService {
 		String rootKeyAlias = getRootKeyAlias(appId, timestamp);
 		CertificateParameters certParams = keymanagerUtil.getCertificateParameters(request, generationDateTime, expiryDateTime);
 		keyStore.generateAndStoreAsymmetricKey(alias, rootKeyAlias, certParams);
-		dbHelper.storeKeyInAlias(appId, generationDateTime, refId, alias, expiryDateTime);
+		X509Certificate x509Cert = (X509Certificate) keyStore.getCertificate(alias);
+		String certThumbprint = cryptomanagerUtil.getCertificateThumbprintInHex(x509Cert);
+		dbHelper.storeKeyInAlias(appId, generationDateTime, refId, alias, expiryDateTime, certThumbprint);
 		return buildResponseObject(responseObjectType, appId, refId, timestamp, alias, generationDateTime, expiryDateTime, request);
 	}
 
@@ -769,7 +774,10 @@ public class KeymanagerServiceImpl implements KeymanagerService {
 			dbHelper.storeKeyInDBStore(keyAlias, keyFromDBStore.get().getMasterAlias(), keymanagerUtil.getPEMFormatedData(reqX509Cert), 
 									keyFromDBStore.get().getPrivateKey());
 		}
-		dbHelper.storeKeyInAlias(appId, notBeforeDate, refId, keyAlias, notAfterDate);
+		// Need to be check if any data got encrypted with the existing certificate and thumbprint is prepended to the encrypted data.
+		// Need to add in documentation about this limitation.
+		String certThumbprint = cryptomanagerUtil.getCertificateThumbprintInHex(reqX509Cert);
+		dbHelper.storeKeyInAlias(appId, notBeforeDate, refId, keyAlias, notAfterDate, certThumbprint);
 		UploadCertificateResponseDto responseDto = new UploadCertificateResponseDto();
 		responseDto.setStatus(KeymanagerConstant.UPLOAD_SUCCESS);
 		responseDto.setTimestamp(timestamp);
@@ -853,7 +861,7 @@ public class KeymanagerServiceImpl implements KeymanagerService {
 		}
 
 		LocalDateTime expireTime = timestamp.minusMinutes(1L);
-		dbHelper.storeKeyInAlias(appId, currentKeyAlias.get(0).getKeyGenerationTime(), refId, keyAlias, expireTime);
+		dbHelper.storeKeyInAlias(appId, currentKeyAlias.get(0).getKeyGenerationTime(), refId, keyAlias, expireTime, currentKeyAlias.get(0).getCertThumbprint());
 		return storeAndBuildResponse(appId, refId, reqX509Cert, notBeforeDate, notAfterDate);
 	}
 
@@ -861,7 +869,8 @@ public class KeymanagerServiceImpl implements KeymanagerService {
 															   LocalDateTime notBeforeDate, LocalDateTime notAfterDate) {
 		String alias = UUID.randomUUID().toString();
 		dbHelper.storeKeyInDBStore(alias, alias, keymanagerUtil.getPEMFormatedData(reqX509Cert), KeymanagerConstant.KS_PK_NA);
-		dbHelper.storeKeyInAlias(appId, notBeforeDate, refId, alias, notAfterDate);
+		String certThumbprint = cryptomanagerUtil.getCertificateThumbprintInHex(reqX509Cert);
+		dbHelper.storeKeyInAlias(appId, notBeforeDate, refId, alias, notAfterDate, certThumbprint);
 		UploadCertificateResponseDto responseDto = new UploadCertificateResponseDto();
 		responseDto.setStatus(KeymanagerConstant.UPLOAD_SUCCESS);
 		responseDto.setTimestamp(DateUtils.getUTCCurrentDateTime());
@@ -903,7 +912,7 @@ public class KeymanagerServiceImpl implements KeymanagerService {
 					"Force Flag is True, Invalidating the existing key and generating new key.");
 			LocalDateTime expireTime = timestamp.minusMinutes(1L);
 			currentKeyAlias.forEach(alias -> {
-				dbHelper.storeKeyInAlias(appId, alias.getKeyGenerationTime(), refId, alias.getAlias(), expireTime);
+				dbHelper.storeKeyInAlias(appId, alias.getKeyGenerationTime(), refId, alias.getAlias(), expireTime, alias.getCertThumbprint());
 			});
 			return generateAndBuildResponse(appId, refId, timestamp);
 		}
@@ -920,7 +929,7 @@ public class KeymanagerServiceImpl implements KeymanagerService {
 		String alias = UUID.randomUUID().toString();
 		LocalDateTime expiryDateTime = timestamp.plusDays(KeymanagerConstant.SYMMETRIC_KEY_VALIDITY);
 		keyStore.generateAndStoreSymmetricKey(alias);
-		dbHelper.storeKeyInAlias(appId, timestamp, refId, alias, expiryDateTime);
+		dbHelper.storeKeyInAlias(appId, timestamp, refId, alias, expiryDateTime, null);
 		return buildSymGenKeyRespObject(timestamp, KeymanagerConstant.GENERATE_SUCCESS);
 	}
 
