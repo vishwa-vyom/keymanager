@@ -20,9 +20,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
+import java.util.concurrent.TimeUnit;
 
+import javax.annotation.PostConstruct;
 import javax.security.auth.x500.X500Principal;
 
+import org.cache2k.Cache;
+import org.cache2k.Cache2kBuilder;
+import org.cache2k.expiry.Expiry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -79,6 +84,9 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
 
     @Value("${mosip.kernel.partner.issuer.certificate.duration.years:1}")
     private int issuerCertDuration;
+
+    @Value("${mosip.kernel.partner.truststore.cache.expire.inMins:120}")
+    private long cacheExpireInMins;
         
     /**
      * Utility to generate Metadata
@@ -93,12 +101,6 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
     PartnerCertManagerDBHelper certDBHelper;
 
     /**
-     * KeymanagerDBHelper instance to handle all DB operations
-     */
-    @Autowired
-    private KeymanagerDBHelper dbHelper;
-
-    /**
      * Keystore instance to handles and store cryptographic keys.
      */
     @Autowired
@@ -106,6 +108,27 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
 
     @Autowired
     private KeymanagerService keymanagerService;
+
+    private Cache<String, Object> caCertTrustStore = null;
+
+    @PostConstruct
+    public void init() {
+        // Added Cache2kBuilder in the postConstruct because expire value 
+        // configured in properties are getting injected after this object creation.
+        // Cache2kBuilder constructor is throwing error.
+        caCertTrustStore = new Cache2kBuilder<String, Object>() {}
+        .name("caCertTrustStore-" + this.hashCode())
+        .expireAfterWrite(cacheExpireInMins, TimeUnit.MINUTES)
+        .entryCapacity(10)
+        .refreshAhead(true)
+        .loaderThreadCount(1)
+        .loader((partnerDomain) -> {
+                LOGGER.info(PartnerCertManagerConstants.SESSIONID, PartnerCertManagerConstants.EMPTY,
+                          PartnerCertManagerConstants.EMPTY, "Loading CA TrustStore Cache for partnerDomain: " + partnerDomain);
+                return certDBHelper.getTrustAnchors(partnerDomain);
+        })
+        .build();
+    }
 
     @Override
     public CACertificateResponseDto uploadCACertificate(CACertificateRequestDto caCertRequestDto) {
@@ -155,6 +178,7 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
             certDBHelper.storeCACertificate(certId, certSubject, certIssuer, issuerId, reqX509Cert, certThumbprint,
                     partnerDomain);
         }
+        caCertTrustStore.expireAt(partnerDomain, Expiry.NOW);
         CACertificateResponseDto responseDto = new CACertificateResponseDto();
         responseDto.setStatus(PartnerCertManagerConstants.SUCCESS_UPLOAD);
         responseDto.setTimestamp(DateUtils.getUTCCurrentDateTime());
@@ -194,7 +218,7 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
     private boolean validateCertificatePath(X509Certificate reqX509Cert, String partnerDomain) {
 
         try {
-            Map<String, Set<?>> trustStoreMap = certDBHelper.getTrustAnchors(partnerDomain);
+            Map<String, Set<?>> trustStoreMap = (Map<String, Set<?>>) caCertTrustStore.get(partnerDomain); //certDBHelper.getTrustAnchors(partnerDomain);
             Set<TrustAnchor> rootTrustAnchors = (Set<TrustAnchor>) trustStoreMap
                     .get(PartnerCertManagerConstants.TRUST_ROOT);
             Set<X509Certificate> interCerts = (Set<X509Certificate>) trustStoreMap

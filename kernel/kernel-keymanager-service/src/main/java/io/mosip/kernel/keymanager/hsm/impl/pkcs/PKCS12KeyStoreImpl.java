@@ -33,6 +33,7 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -115,6 +116,8 @@ public class PKCS12KeyStoreImpl implements io.mosip.kernel.core.keymanager.spi.K
 	private Provider provider = null;
 
 	private char[] keystorePwdCharArr = null;
+
+	private Map<String, PrivateKeyEntry> cachePrivateKeyEntries = new ConcurrentHashMap<>();
     
 
 	public PKCS12KeyStoreImpl(Map<String, String> params) throws Exception {
@@ -261,10 +264,18 @@ public class PKCS12KeyStoreImpl implements io.mosip.kernel.core.keymanager.spi.K
 	public PrivateKeyEntry getAsymmetricKey(String alias) {
 
         try {
+			PrivateKeyEntry privateKeyEntry = cachePrivateKeyEntries.getOrDefault(alias, null);
+			if (Objects.nonNull(privateKeyEntry)) {
+				return privateKeyEntry;
+			}
+			
             if (keyStore.entryInstanceOf(alias, PrivateKeyEntry.class)) {
                 LOGGER.debug("sessionId", "KeyStoreImpl", "getAsymmetricKey", "alias is instanceof keystore");
                 ProtectionParameter password = getPasswordProtection();
-                return (PrivateKeyEntry) keyStore.getEntry(alias, password);
+				privateKeyEntry = (PrivateKeyEntry) keyStore.getEntry(alias, password);
+				cachePrivateKeyEntries.put(alias, privateKeyEntry);
+				LOGGER.info("Key added in cache, key alias: " + alias);
+                return privateKeyEntry;
             } else {
                 throw new NoSuchSecurityProviderException(KeymanagerErrorCode.NO_SUCH_ALIAS.getErrorCode(),
                         KeymanagerErrorCode.NO_SUCH_ALIAS.getErrorMessage() + alias);
