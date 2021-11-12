@@ -6,6 +6,7 @@ import java.security.KeyStore.PrivateKeyEntry;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -34,12 +35,15 @@ import io.mosip.kernel.core.keymanager.spi.KeyStore;
 import io.mosip.kernel.core.logger.spi.Logger;
 import io.mosip.kernel.core.util.CryptoUtil;
 import io.mosip.kernel.core.util.DateUtils;
+import io.mosip.kernel.cryptomanager.util.CryptomanagerUtils;
 import io.mosip.kernel.keymanagerservice.constant.KeymanagerConstant;
 import io.mosip.kernel.keymanagerservice.constant.KeymanagerErrorConstant;
+import io.mosip.kernel.keymanagerservice.entity.DataEncryptKeystore;
 import io.mosip.kernel.keymanagerservice.entity.KeyAlias;
 import io.mosip.kernel.keymanagerservice.exception.NoUniqueAliasException;
 import io.mosip.kernel.keymanagerservice.helper.KeymanagerDBHelper;
 import io.mosip.kernel.keymanagerservice.logger.KeymanagerLogger;
+import io.mosip.kernel.keymanagerservice.repository.DataEncryptKeystoreRepository;
 import io.mosip.kernel.keymanagerservice.util.KeymanagerUtil;
 import io.mosip.kernel.keymigrate.constant.KeyMigratorConstants;
 import io.mosip.kernel.keymigrate.dto.KeyMigrateBaseKeyRequestDto;
@@ -50,8 +54,6 @@ import io.mosip.kernel.keymigrate.dto.ZKKeyMigrateRequestDto;
 import io.mosip.kernel.keymigrate.dto.ZKKeyMigrateResponseDto;
 import io.mosip.kernel.keymigrate.dto.ZKKeyResponseDto;
 import io.mosip.kernel.keymigrate.service.spi.KeyMigratorService;
-import io.mosip.kernel.keymanagerservice.entity.DataEncryptKeystore;
-import io.mosip.kernel.keymanagerservice.repository.DataEncryptKeystoreRepository;
 
 
 /**
@@ -109,6 +111,9 @@ public class KeyMigratorServiceImpl implements KeyMigratorService {
     @Autowired
     DataEncryptKeystoreRepository dataEncryptKeystoreRepository;
 
+    @Autowired
+	CryptomanagerUtils cryptomanagerUtil;
+
     @Override
     public KeyMigrateBaseKeyResponseDto migrateBaseKey(KeyMigrateBaseKeyRequestDto baseKeyMigrateRequest){
         LOGGER.info(KeyMigratorConstants.SESSIONID, KeyMigratorConstants.BASE_KEY, 
@@ -148,8 +153,10 @@ public class KeyMigratorServiceImpl implements KeyMigratorService {
         // have got synced with other components performing trust validation. New KM certificates (MOSIP_ROOT & PMS) will get synced
         // with other components and both will be used to validate the trust.
         //String reSignedCert = reSignCertificate(appId, masterKeyAlias, certificateData, localDateTimeStamp, notBefore, notAfter);
+        X509Certificate reqX509Cert = (X509Certificate) keymanagerUtil.convertToCertificate(certificateData);
+        String certThumbprint = cryptomanagerUtil.getCertificateThumbprintInHex(reqX509Cert);
         dbHelper.storeKeyInDBStore(baseKeyAlias, masterKeyAlias, certificateData, encryptedPrivateKey);
-		dbHelper.storeKeyInAlias(appId, notBefore, refId, baseKeyAlias, notAfter);
+		dbHelper.storeKeyInAlias(appId, notBefore, refId, baseKeyAlias, notAfter, certThumbprint);
 
         LOGGER.info(KeyMigratorConstants.SESSIONID, KeyMigratorConstants.BASE_KEY, 
                             KeyMigratorConstants.EMPTY, "Migration Completed for App Id:" + appId + ", Ref Id: " + refId 
@@ -231,7 +238,7 @@ public class KeyMigratorServiceImpl implements KeyMigratorService {
                     KeyMigratorConstants.EMPTY, "Found Alias to delete key. Alias: " + alias);
             keyStore.deleteKey(alias);
 		    dbHelper.storeKeyInAlias(KeyMigratorConstants.ZK_TEMP_KEY_APP_ID, localDateTimeStamp, KeyMigratorConstants.ZK_TEMP_KEY_REF_ID, 
-                    alias, localDateTimeStamp);
+                    alias, localDateTimeStamp, null);
         } else if (currentKeyAlias.size() == 1) {
             LOGGER.info(KeyMigratorConstants.SESSIONID, KeyMigratorConstants.ZK_KEYS,
                     String.valueOf(currentKeyAlias.size()), "currentKeyAlias size is one, returning the certificate.");
@@ -252,8 +259,10 @@ public class KeyMigratorServiceImpl implements KeyMigratorService {
 		CertificateParameters certParams = keymanagerUtil.getCertificateParameters(KeyMigratorConstants.ZK_CERT_COMMON_NAME, 
                                 localDateTimeStamp, expiryDateTime);
 		keyStore.generateAndStoreAsymmetricKey(alias, null, certParams);
+        X509Certificate x509Cert = (X509Certificate) keyStore.getCertificate(alias);
+		String certThumbprint = cryptomanagerUtil.getCertificateThumbprintInHex(x509Cert);
 		dbHelper.storeKeyInAlias(KeyMigratorConstants.ZK_TEMP_KEY_APP_ID, localDateTimeStamp, KeyMigratorConstants.ZK_TEMP_KEY_REF_ID, 
-                                alias, expiryDateTime);
+                                alias, expiryDateTime, certThumbprint);
 
         String certificateData = keymanagerUtil.getPEMFormatedData(keyStore.getCertificate(alias));
         responseDto.setCertificate(certificateData);
@@ -282,7 +291,7 @@ public class KeyMigratorServiceImpl implements KeyMigratorService {
 
         List<ZKKeyResponseDto> keyResponseList = new ArrayList<>();
         encryptedKeyList.forEach(encryptedKey -> {
-            byte[] encryptedKeyBytes = CryptoUtil.decodeBase64(encryptedKey.getEncryptedKeyData());
+            byte[] encryptedKeyBytes = CryptoUtil.decodeURLSafeBase64(encryptedKey.getEncryptedKeyData());
             int keyIndex = encryptedKey.getKeyIndex();
             ZKKeyResponseDto keyResponseDto = new ZKKeyResponseDto();
             keyResponseDto.setKeyIndex(keyIndex);
@@ -308,7 +317,7 @@ public class KeyMigratorServiceImpl implements KeyMigratorService {
             LOGGER.info(KeyMigratorConstants.SESSIONID, KeyMigratorConstants.ZK_KEYS, 
                             KeyMigratorConstants.EMPTY, "Key Purged from Store. Key Alias: " + tempKeyAlias);
             dbHelper.storeKeyInAlias(KeyMigratorConstants.ZK_TEMP_KEY_APP_ID, localDateTimeStamp, KeyMigratorConstants.ZK_TEMP_KEY_REF_ID, 
-                    tempKeyAlias, localDateTimeStamp);
+                    tempKeyAlias, localDateTimeStamp, null);
         }
         ZKKeyMigrateResponseDto responseDto = new ZKKeyMigrateResponseDto();
         responseDto.setZkEncryptedDataList(keyResponseList);

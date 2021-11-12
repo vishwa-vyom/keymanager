@@ -52,6 +52,7 @@ import io.mosip.kernel.keymanagerservice.constant.KeymanagerErrorConstant;
 import io.mosip.kernel.lkeymanager.exception.InvalidArgumentsException;
 import io.mosip.kernel.lkeymanager.exception.LicenseKeyServiceException;
 import io.mosip.kernel.partnercertservice.exception.PartnerCertManagerException;
+import io.mosip.kernel.signature.exception.CertificateNotValidException;
 import io.mosip.kernel.signature.exception.RequestException;
 import io.mosip.kernel.signature.exception.SignatureFailureException;
 import io.mosip.kernel.zkcryptoservice.exception.ZKCryptoException;
@@ -272,7 +273,14 @@ public class KeymanagerExceptionHandler {
 		errorResponse.getErrors().addAll(exception.getList());
 		return new ResponseEntity<>(errorResponse, HttpStatus.OK);
 	}
-
+	
+	@ExceptionHandler(CertificateNotValidException.class)
+	public ResponseEntity<ResponseWrapper<ServiceError>> certificateNotValidException(
+			HttpServletRequest httpServletRequest, final CertificateNotValidException e) throws IOException {
+		ExceptionUtils.logRootCause(e);
+		return new ResponseEntity<>(
+				getErrorResponse(httpServletRequest, e.getErrorCode(), e.getErrorText(), HttpStatus.OK), HttpStatus.OK);
+	}
 	/**
 	 * Method to handle {@link LicenseKeyServiceException}.
 	 * 

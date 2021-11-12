@@ -30,9 +30,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
+import java.util.concurrent.TimeUnit;
 
+import javax.annotation.PostConstruct;
 import javax.security.auth.x500.X500Principal;
 
+import org.cache2k.Cache;
+import org.cache2k.Cache2kBuilder;
+import org.cache2k.expiry.Expiry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -94,6 +99,9 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
     @Value("${mosip.kernel.partner.issuer.certificate.allowed.grace.duration:30}")
     private int gracePeriod;
 
+    @Value("${mosip.kernel.partner.truststore.cache.expire.inMins:120}")
+    private long cacheExpireInMins;
+
     @Value("${mosip.kernel.partner.resign.ftm.domain.certs:false}")
     private boolean resignFTMDomainCerts;
 
@@ -117,6 +125,28 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
 
     @Autowired
     private KeymanagerService keymanagerService;
+    
+    private Cache<String, Object> caCertTrustStore = null;
+
+    @PostConstruct
+    public void init() {
+        // Added Cache2kBuilder in the postConstruct because expire value 
+        // configured in properties are getting injected after this object creation.
+        // Cache2kBuilder constructor is throwing error.
+        caCertTrustStore = new Cache2kBuilder<String, Object>() {}
+        // added hashcode because test case execution failing with IllegalStateException: Cache already created
+        .name("caCertTrustStore-" + this.hashCode()) 
+        .expireAfterWrite(cacheExpireInMins, TimeUnit.MINUTES)
+        .entryCapacity(10)
+        .refreshAhead(true)
+        .loaderThreadCount(1)
+        .loader((partnerDomain) -> {
+                LOGGER.info(PartnerCertManagerConstants.SESSIONID, PartnerCertManagerConstants.EMPTY,
+                          PartnerCertManagerConstants.EMPTY, "Loading CA TrustStore Cache for partnerDomain: " + partnerDomain);
+                return certDBHelper.getTrustAnchors(partnerDomain);
+        })
+        .build();
+    }
 
     @Override
     public CACertificateResponseDto uploadCACertificate(CACertificateRequestDto caCertRequestDto) {
@@ -206,6 +236,7 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
                 uploadedCert = true;
             }
         }
+        caCertTrustStore.expireAt(partnerDomain, Expiry.NOW);
         CACertificateResponseDto responseDto = new CACertificateResponseDto();
         if (uploadedCert && (certsCount == 1 || !foundError))
             responseDto.setStatus(PartnerCertManagerConstants.SUCCESS_UPLOAD);
@@ -229,7 +260,7 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
                                         + " able to parse, may be p7b certificate data inputed.");
         }
         // Try to Parse as P7B file.
-        byte[] p7bBytes = CryptoUtil.decodeBase64(certificateData);
+        byte[] p7bBytes = CryptoUtil.decodeURLSafeBase64(certificateData);
         try (ByteArrayInputStream certStream = new ByteArrayInputStream(p7bBytes)) {
             CertificateFactory cf = CertificateFactory.getInstance("X.509");
             Collection<?> p7bCertList = cf.generateCertificates(certStream);
@@ -260,7 +291,7 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
     private List<? extends Certificate> getCertificateTrustPath(X509Certificate reqX509Cert, String partnerDomain) {
 
         try {
-            Map<String, Set<?>> trustStoreMap = certDBHelper.getTrustAnchors(partnerDomain);
+            Map<String, Set<?>> trustStoreMap = (Map<String, Set<?>>) caCertTrustStore.get(partnerDomain); //certDBHelper.getTrustAnchors(partnerDomain);
             Set<TrustAnchor> rootTrustAnchors = (Set<TrustAnchor>) trustStoreMap
                     .get(PartnerCertManagerConstants.TRUST_ROOT);
             Set<X509Certificate> interCerts = (Set<X509Certificate>) trustStoreMap
@@ -297,7 +328,7 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
             trustCertList.add(rootCert);
             return trustCertList;
         } catch (CertPathBuilderException | InvalidAlgorithmParameterException | NoSuchAlgorithmException exp) {
-            LOGGER.info(PartnerCertManagerConstants.SESSIONID, PartnerCertManagerConstants.UPLOAD_CA_CERT,
+            LOGGER.debug(PartnerCertManagerConstants.SESSIONID, PartnerCertManagerConstants.UPLOAD_CA_CERT,
                     PartnerCertManagerConstants.EMPTY,
                     "Ignore this exception, the exception thrown when trust validation failed.");
         }

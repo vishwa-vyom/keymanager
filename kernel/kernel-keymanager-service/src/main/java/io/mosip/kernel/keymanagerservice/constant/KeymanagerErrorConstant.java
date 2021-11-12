@@ -39,7 +39,7 @@ public enum KeymanagerErrorConstant {
 
 	UPLOAD_NOT_ALLOWED("KER-KMS-015", "Upload of certificate will not be allowed to update other domain certificate."),
 
-	GENERATION_NOT_ALLOWED("KER-KMS-016", "Not allowed to generate new key pair for other domains."),
+	GENERATION_NOT_ALLOWED("KER-KMS-016", "Not allowed to generate new key pair for other domains or not allowed to generate base key."),
 
 	CERTIFICATE_NOT_FOUND("KER-KMS-017", "Certificate Not found in keystore table."),
 
@@ -50,6 +50,12 @@ public enum KeymanagerErrorConstant {
 	NOT_VALID_SIGNATURE_KEY("KER-KMS-020", "Signing operation for allowed for the provided application id & reference id."),
 
 	REVOKE_NOT_ALLOWED("KER-KMS-021", "Key Revocation not allowed."),
+
+	GENERATION_CSR_ALLOWED("KER-KMS-022", "CSR Generation not allowed for the provided App Id & Ref Id."),
+
+	MORE_THAN_ONE_KEY_FOUND("KER-KMS-023", "More than one key alias found for the provided thumbprint."),
+
+	APP_ID_REFERENCE_ID_NOT_MATCHING("KER-KMS-024", "Application Id & Reference Id not matching with the inputted thumbprint."),
 
 	INTERNAL_SERVER_ERROR("KER-KMS-500", "Internal server error");
 
