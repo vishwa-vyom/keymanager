@@ -64,7 +64,6 @@ public class CSRGenerateRequestDto {
 	 * State For Generating Certificate or CSR
 	 */
 	@ApiModelProperty(notes = "State (ST)", example = "KA", required = false)
-	@NotBlank(message = KeymanagerConstant.INVALID_REQUEST)
 	private String state;
 
 	/**

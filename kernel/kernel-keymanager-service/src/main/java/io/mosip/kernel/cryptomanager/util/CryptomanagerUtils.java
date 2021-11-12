@@ -6,35 +6,35 @@
  */
 package io.mosip.kernel.cryptomanager.util;
 
-import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.Optional;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import java.util.Arrays;
+import org.bouncycastle.util.encoders.Hex;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.stereotype.Component;
 
 import io.mosip.kernel.core.exception.ParseException;
-import io.mosip.kernel.core.util.CryptoUtil;
 import io.mosip.kernel.core.logger.spi.Logger;
+import io.mosip.kernel.core.util.CryptoUtil;
 import io.mosip.kernel.cryptomanager.constant.CryptomanagerConstant;
 import io.mosip.kernel.cryptomanager.constant.CryptomanagerErrorCode;
 import io.mosip.kernel.cryptomanager.dto.CryptomanagerRequestDto;
 import io.mosip.kernel.cryptomanager.exception.CryptoManagerSerivceException;
 import io.mosip.kernel.keymanagerservice.dto.SymmetricKeyRequestDto;
+import io.mosip.kernel.keymanagerservice.logger.KeymanagerLogger;
 import io.mosip.kernel.keymanagerservice.service.KeymanagerService;
 import io.mosip.kernel.keymanagerservice.util.KeymanagerUtil;
-import io.mosip.kernel.keymanagerservice.logger.KeymanagerLogger;
 
 /**
  * Util class for this project.
@@ -104,7 +104,7 @@ public class CryptomanagerUtils {
 	 * @return Decrypted {@link SecretKey} from Key Manager Service
 	 */
 	public SecretKey getDecryptedSymmetricKey(CryptomanagerRequestDto cryptomanagerRequestDto) {
-		byte[] symmetricKey = CryptoUtil.decodeBase64(decryptSymmetricKeyUsingKeyManager(cryptomanagerRequestDto));
+		byte[] symmetricKey = CryptoUtil.decodeURLSafeBase64(decryptSymmetricKeyUsingKeyManager(cryptomanagerRequestDto));
 		return new SecretKeySpec(symmetricKey, 0, symmetricKey.length, symmetricAlgorithmName);
 	}
 
@@ -114,6 +114,7 @@ public class CryptomanagerUtils {
 	 * @param cryptomanagerRequestDto the cryptomanager request dto
 	 * @return the string
 	 */
+	@SuppressWarnings("deprecation")
 	private String decryptSymmetricKeyUsingKeyManager(CryptomanagerRequestDto cryptomanagerRequestDto) {
 		SymmetricKeyRequestDto symmetricKeyRequestDto = new SymmetricKeyRequestDto(
 				cryptomanagerRequestDto.getApplicationId(), cryptomanagerRequestDto.getTimeStamp(),
@@ -189,6 +190,10 @@ public class CryptomanagerUtils {
             throw new CryptoManagerSerivceException(CryptomanagerErrorCode.CERTIFICATE_THUMBPRINT_ERROR.getErrorCode(),
 						CryptomanagerErrorCode.CERTIFICATE_THUMBPRINT_ERROR.getErrorMessage());
 		}
+	}
+
+	public String getCertificateThumbprintInHex(Certificate cert) {
+        return Hex.toHexString(getCertificateThumbprint(cert)).toUpperCase();
 	}
 
 	public byte[] concatCertThumbprint(byte[] certThumbprint, byte[] encryptedKey){
