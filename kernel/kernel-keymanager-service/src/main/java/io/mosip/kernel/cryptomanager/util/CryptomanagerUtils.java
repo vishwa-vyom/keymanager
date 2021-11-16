@@ -228,4 +228,15 @@ public class CryptomanagerUtils {
 	public boolean isDataValid(String anyData) {
 		return anyData != null && !anyData.trim().isEmpty();
 	}
+
+	public byte[] decodeBase64Data(String anyBase64EncodedData){
+
+		try{
+			return CryptoUtil.decodeURLSafeBase64(anyBase64EncodedData);
+		} catch(IllegalArgumentException argException) {
+			LOGGER.debug(CryptomanagerConstant.SESSIONID, CryptomanagerConstant.ENCRYPT, "", 
+				"Error Decoding Base64 URL Safe data, trying with Base64 normal decode.");
+		}
+		return CryptoUtil.decodeBase64(anyBase64EncodedData);
+	}
 }
