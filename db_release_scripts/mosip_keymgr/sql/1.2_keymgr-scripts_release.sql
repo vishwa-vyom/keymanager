@@ -12,4 +12,5 @@
 
 
 ALTER TABLE keymgr.key_alias ADD COLUMN cert_thumbprint character varying(100);
+ALTER TABLE keymgr.key_alias ADD CONSTRAINT unq_cert_tmprnt UNIQUE (cert_thumbprint);
 ----------------------------------------------------------------------------------------------------
