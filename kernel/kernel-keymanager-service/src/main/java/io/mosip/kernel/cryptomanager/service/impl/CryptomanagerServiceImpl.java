@@ -111,16 +111,16 @@ public class CryptomanagerServiceImpl implements CryptomanagerService {
 		final byte[] encryptedData;
 		byte[] headerBytes = new byte[0];
 		if (cryptomanagerUtil.isValidSalt(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getSalt()))) {
-			encryptedData = cryptoCore.symmetricEncrypt(secretKey, CryptoUtil.decodeURLSafeBase64(cryptoRequestDto.getData()),
-					CryptoUtil.decodeURLSafeBase64(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getSalt())),
-					CryptoUtil.decodeURLSafeBase64(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getAad())));
+			encryptedData = cryptoCore.symmetricEncrypt(secretKey, cryptomanagerUtil.decodeBase64Data(cryptoRequestDto.getData()),
+							cryptomanagerUtil.decodeBase64Data(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getSalt())),
+							cryptomanagerUtil.decodeBase64Data(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getAad())));
 		} else {
-			byte[] aad = CryptoUtil.decodeURLSafeBase64(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getAad()));
+			byte[] aad = cryptomanagerUtil.decodeBase64Data(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getAad()));
 			if (aad == null || aad.length == 0){
 				encryptedData = generateAadAndEncryptData(secretKey, cryptoRequestDto.getData());
 				headerBytes = CryptomanagerConstant.VERSION_RSA_2048;
 			} else {
-				encryptedData = cryptoCore.symmetricEncrypt(secretKey, CryptoUtil.decodeURLSafeBase64(cryptoRequestDto.getData()),
+				encryptedData = cryptoCore.symmetricEncrypt(secretKey, cryptomanagerUtil.decodeBase64Data(cryptoRequestDto.getData()),
 										aad);
 			}
 		}
@@ -154,7 +154,7 @@ public class CryptomanagerServiceImpl implements CryptomanagerService {
 						"Provided AAD value is null or empty byte array. So generating random 32 bytes for AAD.");
 		byte[] aad = cryptomanagerUtil.generateRandomBytes(CryptomanagerConstant.GCM_AAD_LENGTH);
 		byte[] nonce = copyOfRange(aad, 0, CryptomanagerConstant.GCM_NONCE_LENGTH);
-		byte[] encData = cryptoCore.symmetricEncrypt(secretKey, CryptoUtil.decodeURLSafeBase64(data),
+		byte[] encData = cryptoCore.symmetricEncrypt(secretKey, cryptomanagerUtil.decodeBase64Data(data),
 								nonce, aad);
 		return cryptomanagerUtil.concatByteArrays(aad, encData);
 	}
@@ -172,7 +172,7 @@ public class CryptomanagerServiceImpl implements CryptomanagerService {
 						"Request for data decryption.");
 
 		int keyDemiliterIndex = 0;
-		byte[] encryptedHybridData = CryptoUtil.decodeURLSafeBase64(cryptoRequestDto.getData());
+		byte[] encryptedHybridData = cryptomanagerUtil.decodeBase64Data(cryptoRequestDto.getData());
 		keyDemiliterIndex = CryptoUtil.getSplitterIndex(encryptedHybridData, keyDemiliterIndex, keySplitter);
 		byte[] encryptedKey = copyOfRange(encryptedHybridData, 0, keyDemiliterIndex);
 		byte[] encryptedData = copyOfRange(encryptedHybridData, keyDemiliterIndex + keySplitter.length(),
@@ -186,14 +186,14 @@ public class CryptomanagerServiceImpl implements CryptomanagerService {
 		final byte[] decryptedData;
 		if (cryptomanagerUtil.isValidSalt(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getSalt()))) {
 			decryptedData = cryptoCore.symmetricDecrypt(decryptedSymmetricKey, encryptedData,
-					CryptoUtil.decodeURLSafeBase64(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getSalt())),
-					CryptoUtil.decodeURLSafeBase64(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getAad())));
+							cryptomanagerUtil.decodeBase64Data(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getSalt())),
+							cryptomanagerUtil.decodeBase64Data(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getAad())));
 		} else {
 			if (Arrays.equals(headerBytes, CryptomanagerConstant.VERSION_RSA_2048)) {
 				decryptedData = splitAadAndDecryptData(decryptedSymmetricKey, encryptedData);
 			} else {
 				decryptedData = cryptoCore.symmetricDecrypt(decryptedSymmetricKey, encryptedData,
-						CryptoUtil.decodeURLSafeBase64(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getAad())));
+							cryptomanagerUtil.decodeBase64Data(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getAad())));
 			}
 		}
 		LOGGER.info(CryptomanagerConstant.SESSIONID, CryptomanagerConstant.DECRYPT, CryptomanagerConstant.DECRYPT, 
