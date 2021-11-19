@@ -60,7 +60,8 @@ public class KeyMigratorController {
 			@ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
-	@PreAuthorize("hasAnyRole('KEY_MIGRATION_ADMIN')")
+	//@PreAuthorize("hasAnyRole('KEY_MIGRATION_ADMIN')")
+	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostmigratebasekey())")
 	@ResponseFilter
 	@PostMapping(value = "/migrateBaseKey", produces = "application/json")
 	public ResponseWrapper<KeyMigrateBaseKeyResponseDto> migrateBaseKey(
@@ -83,7 +84,8 @@ public class KeyMigratorController {
 			@ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
-	@PreAuthorize("hasAnyRole('KEY_MIGRATION_ADMIN')")
+	//@PreAuthorize("hasAnyRole('KEY_MIGRATION_ADMIN')")
+	@PreAuthorize("hasAnyRole(@authorizedRoles.getGetzktempcertificate())")
 	@ResponseFilter
 	@GetMapping(value = "/getZKTempCertificate", produces = "application/json")
 	public ResponseWrapper<ZKKeyMigrateCertficateResponseDto> getZKTempCertificate() {
@@ -105,7 +107,8 @@ public class KeyMigratorController {
 			@ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
-	@PreAuthorize("hasAnyRole('KEY_MIGRATION_ADMIN')")
+	//@PreAuthorize("hasAnyRole('KEY_MIGRATION_ADMIN')")
+	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostmigratezkkeys())")
 	@ResponseFilter
 	@PostMapping(value = "/migrateZKKeys", produces = "application/json")
 	public ResponseWrapper<ZKKeyMigrateResponseDto> migrateZKKeys(
