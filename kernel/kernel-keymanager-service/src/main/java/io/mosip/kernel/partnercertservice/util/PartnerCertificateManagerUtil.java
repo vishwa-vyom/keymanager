@@ -55,6 +55,8 @@ public class PartnerCertificateManagerUtil {
 
     private static final Logger LOGGER = KeymanagerLogger.getLogger(PartnerCertificateManagerUtil.class);
 
+    private static final int DEFAULT_ALLOWED_CERTIFICATE_DAYS = 315;
+
     /**
      * Function to check certificate is self-signed.
      * 
@@ -68,7 +70,7 @@ public class PartnerCertificateManagerUtil {
             return true;
         } catch (CertificateException | NoSuchAlgorithmException | InvalidKeyException | SignatureException
                 | NoSuchProviderException exp) {
-            LOGGER.info(PartnerCertManagerConstants.SESSIONID, PartnerCertManagerConstants.UPLOAD_CA_CERT,
+            LOGGER.debug(PartnerCertManagerConstants.SESSIONID, PartnerCertManagerConstants.UPLOAD_CA_CERT,
                     PartnerCertManagerConstants.PCM_UTIL,
                     "Ignore this exception, the exception thrown when signature validation failed.");
         }
@@ -126,7 +128,7 @@ public class PartnerCertificateManagerUtil {
             x509Cert.checkValidity(currentDate);
             return true;
         } catch(CertificateExpiredException | CertificateNotYetValidException exp) {
-            LOGGER.info(PartnerCertManagerConstants.SESSIONID, PartnerCertManagerConstants.UPLOAD_CA_CERT,
+            LOGGER.debug(PartnerCertManagerConstants.SESSIONID, PartnerCertManagerConstants.UPLOAD_CA_CERT,
                     PartnerCertManagerConstants.PCM_UTIL,
                     "Ignore this exception, the exception thrown when certificate dates are not valid.");
         }
@@ -135,7 +137,7 @@ public class PartnerCertificateManagerUtil {
             x509Cert.checkValidity();
             return true;
         } catch(CertificateExpiredException | CertificateNotYetValidException exp) {
-            LOGGER.info(PartnerCertManagerConstants.SESSIONID, PartnerCertManagerConstants.UPLOAD_CA_CERT,
+            LOGGER.debug(PartnerCertManagerConstants.SESSIONID, PartnerCertManagerConstants.UPLOAD_CA_CERT,
                     PartnerCertManagerConstants.PCM_UTIL,
                     "Ignore this exception, the exception thrown when certificate dates are not valid.");
         }
@@ -144,17 +146,19 @@ public class PartnerCertificateManagerUtil {
 
     public static boolean isCertificateValidForDuration(X509Certificate x509Cert, int issuerCertDuration, int gracePeriod) {
         
-        try {
-            int noOfDays = (issuerCertDuration * PartnerCertManagerConstants.YEAR_DAYS) - gracePeriod;
-            LocalDateTime localDateTimeStamp = DateUtils.getUTCCurrentDateTime().plus(noOfDays, ChronoUnit.DAYS);
-            Date issuerDuration = Date.from(localDateTimeStamp.atZone(ZoneId.systemDefault()).toInstant());
-            x509Cert.checkValidity(issuerDuration);
+        int noOfDays = (issuerCertDuration * PartnerCertManagerConstants.YEAR_DAYS) - gracePeriod;
+        if (noOfDays < 0) {
+            noOfDays = DEFAULT_ALLOWED_CERTIFICATE_DAYS;
+        } 
+        LocalDateTime localDateTimeStamp = DateUtils.getUTCCurrentDateTime();//.plus(noOfDays, ChronoUnit.DAYS);
+        LocalDateTime certNotAfter = x509Cert.getNotAfter().toInstant().atZone(ZoneId.of("UTC")).toLocalDateTime();
+        long validDays = ChronoUnit.DAYS.between(localDateTimeStamp, certNotAfter);
+        if ((validDays - noOfDays) >= 0)             
             return true;
-        } catch(CertificateExpiredException | CertificateNotYetValidException exp) {
-            LOGGER.info(PartnerCertManagerConstants.SESSIONID, PartnerCertManagerConstants.UPLOAD_CA_CERT,
-                    PartnerCertManagerConstants.PCM_UTIL,
-                    "Ignore this exception, the exception thrown when certificate dates are not allowed within grace period.");
-        }
+
+        LOGGER.info(PartnerCertManagerConstants.SESSIONID, PartnerCertManagerConstants.UPLOAD_CA_CERT,
+            PartnerCertManagerConstants.PCM_UTIL, "Remaining validity for the Certificate is " + validDays + 
+            " days, grace days configured is " + gracePeriod);
         return false;
     }
 
@@ -232,7 +236,7 @@ public class PartnerCertificateManagerUtil {
 
             CMSTypedData cmsTypedData = new CMSAbsentContent();
             CMSSignedData cmsSignedData = generator.generate(cmsTypedData);
-            return CryptoUtil.encodeBase64(cmsSignedData.getEncoded());
+            return CryptoUtil.encodeToURLSafeBase64(cmsSignedData.getEncoded());
         } catch(CertificateEncodingException | CMSException | IOException e) {
             LOGGER.error(PartnerCertManagerConstants.SESSIONID, PartnerCertManagerConstants.UPLOAD_PARTNER_CERT,
                     PartnerCertManagerConstants.PCM_UTIL, "Error generating p7b certificates chain.");

@@ -24,6 +24,12 @@ import io.mosip.kernel.signature.dto.SignatureResponseDto;
 import io.mosip.kernel.signature.dto.TimestampRequestDto;
 import io.mosip.kernel.signature.dto.ValidatorResponseDto;
 import io.mosip.kernel.signature.service.SignatureService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * 
@@ -33,6 +39,7 @@ import io.mosip.kernel.signature.service.SignatureService;
  */
 @RestController
 @CrossOrigin
+@Tag(name = "signaturecontroller", description = "Operation related to signature")
 public class SignatureController {
 	/**
 	 * Crypto signature Service field with functions related to signature
@@ -46,9 +53,15 @@ public class SignatureController {
 	 * @param requestDto {@link SignRequestDto} having required fields.
 	 * @return The {@link SignatureResponse}
 	 */
-	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN','RESIDENT')")
+	@Operation(summary = "Function to sign response", description = "Function to sign response", tags = {
+			"signaturecontroller" })
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Success or you may find errors in error array in response"),
+			@ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
+	@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN','RESIDENT')")
 	@ResponseFilter
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostsign())")
 	@PostMapping(value = "/sign")
 	@Deprecated
 	public ResponseWrapper<SignResponseDto> sign(@RequestBody @Valid RequestWrapper<SignRequestDto> requestDto) {
@@ -61,9 +74,15 @@ public class SignatureController {
 		return response;
 	}
 
-	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN')")
+	@Operation(summary = "Function to validate signature", description = "Function to validate signature", tags = {
+			"signaturecontroller" })
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Success or you may find errors in error array in response"),
+			@ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
+	@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN')")
 	@ResponseFilter
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostvalidate())")
 	@PostMapping(value = "/validate")
 	@Deprecated
 	public ResponseWrapper<ValidatorResponseDto> validate(
@@ -73,9 +92,14 @@ public class SignatureController {
 		return response;
 	}
 
-	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN','RESIDENT')")
+	@Operation(summary = "Function to sign PDF", description = "Function to sign PDF", tags = { "signaturecontroller" })
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Success or you may find errors in error array in response"),
+			@ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
+	@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN','RESIDENT')")
 	@ResponseFilter
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostpdfsign())")
 	@PostMapping("/pdf/sign")
 	public ResponseWrapper<SignatureResponseDto> signPDF(
 			@RequestBody @Valid RequestWrapper<PDFSignatureRequestDto> signatureResponseDto) {
@@ -90,11 +114,18 @@ public class SignatureController {
 	 * @param requestDto {@link JWTSignatureRequestDto} having required fields.
 	 * @return The {@link JWTSignatureResponseDto}
 	 */
-	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN','RESIDENT')")
+	@Operation(summary = "TFunction to JWT sign datas", description = "Function to JWT sign data", tags = {
+			"signaturecontroller" })
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Success or you may find errors in error array in response"),
+			@ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
+	@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN','RESIDENT')")
 	@ResponseFilter
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostjwtsign())")
 	@PostMapping(value = "/jwtSign")
-	public ResponseWrapper<JWTSignatureResponseDto> jwtSign(@RequestBody @Valid RequestWrapper<JWTSignatureRequestDto> requestDto) {
+	public ResponseWrapper<JWTSignatureResponseDto> jwtSign(
+			@RequestBody @Valid RequestWrapper<JWTSignatureRequestDto> requestDto) {
 		JWTSignatureResponseDto signatureResponse = service.jwtSign(requestDto.getRequest());
 		ResponseWrapper<JWTSignatureResponseDto> response = new ResponseWrapper<>();
 		response.setResponse(signatureResponse);
@@ -104,14 +135,22 @@ public class SignatureController {
 	/**
 	 * Function to JWT Signature verification
 	 * 
-	 * @param requestDto {@link JWTSignatureVerifyRequestDto} having required fields.
+	 * @param requestDto {@link JWTSignatureVerifyRequestDto} having required
+	 *                   fields.
 	 * @return The {@link JWTSignatureVerifyResponseDto}
 	 */
-	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN','RESIDENT')")
+	@Operation(summary = "Function to JWT Signature verification", description = "Function to JWT Signature verification", tags = {
+			"signaturecontroller" })
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Success or you may find errors in error array in response"),
+			@ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
+	@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN','RESIDENT')")
 	@ResponseFilter
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostjwtverify())")
 	@PostMapping(value = "/jwtVerify")
-	public ResponseWrapper<JWTSignatureVerifyResponseDto> jwtVerify(@RequestBody @Valid RequestWrapper<JWTSignatureVerifyRequestDto> requestDto) {
+	public ResponseWrapper<JWTSignatureVerifyResponseDto> jwtVerify(
+			@RequestBody @Valid RequestWrapper<JWTSignatureVerifyRequestDto> requestDto) {
 		JWTSignatureVerifyResponseDto signatureResponse = service.jwtVerify(requestDto.getRequest());
 		ResponseWrapper<JWTSignatureVerifyResponseDto> response = new ResponseWrapper<>();
 		response.setResponse(signatureResponse);

@@ -1,23 +1,28 @@
 package io.mosip.kernel.keymanagerservice.helper;
 
+import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import io.mosip.kernel.core.logger.spi.Logger;
+import io.mosip.kernel.cryptomanager.util.CryptomanagerUtils;
 import io.mosip.kernel.keymanagerservice.constant.KeymanagerConstant;
 import io.mosip.kernel.keymanagerservice.constant.KeymanagerErrorConstant;
 import io.mosip.kernel.keymanagerservice.entity.KeyAlias;
 import io.mosip.kernel.keymanagerservice.entity.KeyPolicy;
 import io.mosip.kernel.keymanagerservice.entity.KeyStore;
 import io.mosip.kernel.keymanagerservice.exception.InvalidApplicationIdException;
+import io.mosip.kernel.keymanagerservice.exception.KeymanagerServiceException;
 import io.mosip.kernel.keymanagerservice.logger.KeymanagerLogger;
 import io.mosip.kernel.keymanagerservice.repository.KeyAliasRepository;
 import io.mosip.kernel.keymanagerservice.repository.KeyPolicyRepository;
@@ -36,6 +41,9 @@ import io.mosip.kernel.keymanagerservice.util.KeymanagerUtil;
 public class KeymanagerDBHelper {
 
     private static final Logger LOGGER = KeymanagerLogger.getLogger(KeymanagerDBHelper.class);
+
+    @Value("${mosip.sign-certificate-refid:SIGN}")
+	private String signRefId;
 
     /**
 	 * {@link KeyAliasRepository} instance
@@ -60,6 +68,18 @@ public class KeymanagerDBHelper {
 	 */
 	@Autowired
     KeymanagerUtil keymanagerUtil;
+
+    /**
+	 * Keystore instance to handles and store cryptographic keys.
+	 */
+	@Autowired
+	io.mosip.kernel.core.keymanager.spi.KeyStore keyStore;
+
+    /**
+	 * {@link CryptomanagerUtils} instance
+	 */
+	@Autowired
+	CryptomanagerUtils cryptomanagerUtil;
     
     /**
 	 * Function to store key in keyalias table
@@ -71,7 +91,7 @@ public class KeymanagerDBHelper {
 	 * @param expiryDateTime expiryDateTime
 	 */
 	public void storeKeyInAlias(String applicationId, LocalDateTime timeStamp, String referenceId, String alias,
-                            LocalDateTime expiryDateTime) {
+                            LocalDateTime expiryDateTime, String certThumbprint) {
         LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY, KeymanagerConstant.STOREKEYALIAS);
         KeyAlias keyAlias = new KeyAlias();
         keyAlias.setAlias(alias);
@@ -79,6 +99,7 @@ public class KeymanagerDBHelper {
         keyAlias.setReferenceId(referenceId);
         keyAlias.setKeyGenerationTime(timeStamp);
         keyAlias.setKeyExpiryTime(expiryDateTime);
+        keyAlias.setCertThumbprint(certThumbprint);
         keyAliasRepository.saveAndFlush(keymanagerUtil.setMetaData(keyAlias));
     }
 
@@ -196,5 +217,69 @@ public class KeymanagerDBHelper {
 					KeymanagerErrorConstant.APPLICATIONID_NOT_VALID.getErrorMessage());
         }
         return keyPolicy;
+    }
+
+    public KeyStore getKeyAlias(String certThumbprint, String appIdRefIdKey) {
+        List<KeyAlias> keyAliases = keyAliasRepository.findByCertThumbprint(certThumbprint);
+        if (keyAliases.isEmpty()) {
+            LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
+                            "key alias not found for the provided thumbprint, may be cert thumbprint is not updated. Adding thumbprint(s) now.");
+            addCertificateThumbprints();
+            keyAliases = keyAliasRepository.findByCertThumbprint(certThumbprint);
+        }
+        if (keyAliases.size() > 1) {
+            LOGGER.error(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
+                "More than one key alias found for the provided thumbprint.");
+            throw new KeymanagerServiceException(KeymanagerErrorConstant.MORE_THAN_ONE_KEY_FOUND.getErrorCode(),
+                KeymanagerErrorConstant.MORE_THAN_ONE_KEY_FOUND.getErrorMessage());
+        }
+        // Duplicate check required because before cacheing comparison of app id & reference id is required.
+        String idKey = keyAliases.get(0).getApplicationId() + KeymanagerConstant.HYPHEN + keyAliases.get(0).getReferenceId();
+        if (!idKey.equals(appIdRefIdKey)){
+            LOGGER.error(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
+                "AppId & Reference Id not matching with the inputted thumbprint value(helper).");
+            throw new KeymanagerServiceException(KeymanagerErrorConstant.APP_ID_REFERENCE_ID_NOT_MATCHING.getErrorCode(),
+                KeymanagerErrorConstant.APP_ID_REFERENCE_ID_NOT_MATCHING.getErrorMessage());
+        }
+        Optional<KeyStore> keyFromDBStore = getKeyStoreFromDB(keyAliases.get(0).getAlias());
+        if (!keyFromDBStore.isPresent()){
+            LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
+                "Key not found in key store for the matched thumbprint. Might has used master key during encryption.");
+            return new KeyStore(keyAliases.get(0).getAlias(), null, null, null);
+            
+        }
+        return keyFromDBStore.get();
+    }
+
+    // this will get executed only one time to add the certificate thumbprints.
+    private synchronized void addCertificateThumbprints() {
+        List<KeyAlias> allKeyAliases = keyAliasRepository.findAll();
+        allKeyAliases.stream().filter(keyAlias -> ((Objects.isNull(keyAlias.getCertThumbprint()) || 
+                                                    keyAlias.getCertThumbprint().equals(KeymanagerConstant.EMPTY)) && 
+                                                    !keyAlias.getApplicationId().equals(KeymanagerConstant.KERNEL_APP_ID) &&
+                                                    !keyAlias.getReferenceId().equals(KeymanagerConstant.KERNEL_IDENTIFY_CACHE)))
+                                .forEach(keyAlias -> {
+                                    if (keyAlias.getReferenceId().isEmpty() || 
+                                        (keyAlias.getApplicationId().equals(KeymanagerConstant.KERNEL_APP_ID) &&
+                                            keyAlias.getReferenceId().equals(signRefId))) {
+                                        X509Certificate x509Cert = (X509Certificate) keyStore.getCertificate(keyAlias.getAlias());
+                                        String certThumbprint = cryptomanagerUtil.getCertificateThumbprintInHex(x509Cert);
+                                        storeKeyInAlias(keyAlias.getApplicationId(), keyAlias.getKeyGenerationTime(), keyAlias.getReferenceId(), 
+                                            keyAlias.getAlias(), keyAlias.getKeyExpiryTime(), certThumbprint);
+                                    }
+                                    if (!keyAlias.getReferenceId().isEmpty()){
+                                        Optional<io.mosip.kernel.keymanagerservice.entity.KeyStore> keyFromDBStore = 
+                                                getKeyStoreFromDB(keyAlias.getAlias());
+                                        if (keyFromDBStore.isPresent()) {
+                                            String certificateData = keyFromDBStore.get().getCertificateData();
+                                            X509Certificate x509Cert = (X509Certificate) keymanagerUtil.convertToCertificate(certificateData);
+                                            String certThumbprint = cryptomanagerUtil.getCertificateThumbprintInHex(x509Cert);
+                                            storeKeyInAlias(keyAlias.getApplicationId(), keyAlias.getKeyGenerationTime(), 
+                                                keyAlias.getReferenceId(), keyAlias.getAlias(), keyAlias.getKeyExpiryTime(), certThumbprint);
+                                        }
+                                    }
+                                    LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
+                                        "Thumbprint added for the key alias: " + keyAlias.getAlias());
+                                });
     }
 }

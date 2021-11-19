@@ -78,7 +78,7 @@ public class RandomKeysGenerator {
 
     private void generateAndStore(String appId, String referenceId, String keyAlias, LocalDateTime localDateTimeStamp) {
 		keyStore.generateAndStoreSymmetricKey(keyAlias);
-        dbHelper.storeKeyInAlias(appId, localDateTimeStamp, referenceId, keyAlias, localDateTimeStamp.plusDays(1825));
+        dbHelper.storeKeyInAlias(appId, localDateTimeStamp, referenceId, keyAlias, localDateTimeStamp.plusDays(1825), null);
     }
     
     private void generate10KKeysAndStoreInDB(String cacheMasterKeyAlias) throws Exception {

@@ -172,7 +172,7 @@ public class CryptographicServiceIntegrationTest {
 	@Test
 	public void testDecrypt() throws Exception {
 		SymmetricKeyResponseDto symmetricKeyResponseDto = new SymmetricKeyResponseDto(
-				CryptoUtil.encodeBase64(generator.getSymmetricKey().getEncoded()));
+				CryptoUtil.encodeToURLSafeBase64(generator.getSymmetricKey().getEncoded()));
 
 		when(cryptoCore.symmetricDecrypt(Mockito.any(), Mockito.any(), Mockito.any())).thenReturn("dXJ2aWw".getBytes());
        
@@ -191,6 +191,7 @@ public class CryptographicServiceIntegrationTest {
 				refid, data, true);
 		when(keyManagerService.decryptSymmetricKey(Mockito.any())).thenReturn(symmetricKeyResponseDto);
 		when(cryptomanagerUtil.parseEncryptKeyHeader(Mockito.any())).thenReturn("".getBytes());
+		when(cryptomanagerUtil.decodeBase64Data(data)).thenReturn("MOCKENCRYPTEDKEY#KEY_SPLITTER#MOCKENCRYPTEDDATA".getBytes());
 		String requestBody = objectMapper.writeValueAsString(requestWrapper);
 		MvcResult result = mockMvc
 				.perform(post("/decrypt").contentType(MediaType.APPLICATION_JSON).content(requestBody))

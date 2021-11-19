@@ -1,9 +1,3 @@
-/*
- * 
- * 
- * 
- * 
- */
 package io.mosip.kernel.cryptomanager.service.impl;
 
 import static java.util.Arrays.copyOfRange;
@@ -34,6 +28,7 @@ import io.mosip.kernel.cryptomanager.exception.CryptoManagerSerivceException;
 import io.mosip.kernel.cryptomanager.service.CryptomanagerService;
 import io.mosip.kernel.cryptomanager.util.CryptomanagerUtils;
 import io.mosip.kernel.keygenerator.bouncycastle.KeyGenerator;
+import io.mosip.kernel.keymanagerservice.constant.KeymanagerConstant;
 import io.mosip.kernel.keymanagerservice.logger.KeymanagerLogger;
 
 /**
@@ -104,7 +99,8 @@ public class CryptomanagerServiceImpl implements CryptomanagerService {
 		
 		if(!cryptomanagerUtil.isDataValid(cryptoRequestDto.getReferenceId()) || 
 			(cryptoRequestDto.getApplicationId().equalsIgnoreCase(signApplicationId) && 
-				cryptoRequestDto.getReferenceId().equalsIgnoreCase(signRefId))) {
+				(cryptoRequestDto.getReferenceId().equalsIgnoreCase(signRefId) ||
+				cryptoRequestDto.getReferenceId().equalsIgnoreCase(KeymanagerConstant.KERNEL_IDENTIFY_CACHE)))) {
 			LOGGER.error(CryptomanagerConstant.SESSIONID, CryptomanagerConstant.ENCRYPT, CryptomanagerConstant.ENCRYPT,
 								"Not Allowed to preform encryption with Master Key.");
 			throw new CryptoManagerSerivceException(CryptomanagerErrorCode.ENCRYPT_NOT_ALLOWED_ERROR.getErrorCode(),
@@ -115,16 +111,16 @@ public class CryptomanagerServiceImpl implements CryptomanagerService {
 		final byte[] encryptedData;
 		byte[] headerBytes = new byte[0];
 		if (cryptomanagerUtil.isValidSalt(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getSalt()))) {
-			encryptedData = cryptoCore.symmetricEncrypt(secretKey, CryptoUtil.decodeBase64(cryptoRequestDto.getData()),
-					CryptoUtil.decodeBase64(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getSalt())),
-					CryptoUtil.decodeBase64(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getAad())));
+			encryptedData = cryptoCore.symmetricEncrypt(secretKey, cryptomanagerUtil.decodeBase64Data(cryptoRequestDto.getData()),
+							cryptomanagerUtil.decodeBase64Data(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getSalt())),
+							cryptomanagerUtil.decodeBase64Data(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getAad())));
 		} else {
-			byte[] aad = CryptoUtil.decodeBase64(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getAad()));
+			byte[] aad = cryptomanagerUtil.decodeBase64Data(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getAad()));
 			if (aad == null || aad.length == 0){
 				encryptedData = generateAadAndEncryptData(secretKey, cryptoRequestDto.getData());
 				headerBytes = CryptomanagerConstant.VERSION_RSA_2048;
 			} else {
-				encryptedData = cryptoCore.symmetricEncrypt(secretKey, CryptoUtil.decodeBase64(cryptoRequestDto.getData()),
+				encryptedData = cryptoCore.symmetricEncrypt(secretKey, cryptomanagerUtil.decodeBase64Data(cryptoRequestDto.getData()),
 										aad);
 			}
 		}
@@ -142,13 +138,13 @@ public class CryptomanagerServiceImpl implements CryptomanagerService {
 		// request thumbprint flag will not be considered if support no thumbprint is set to false. 
 		if (noThumbprint && !prependThumbprint) {
 			byte[] finalEncKeyBytes = cryptomanagerUtil.concatByteArrays(headerBytes, encryptedSymmetricKey);
-			cryptoResponseDto.setData(CryptoUtil.encodeBase64(CryptoUtil.combineByteArray(encryptedData, finalEncKeyBytes, keySplitter)));
+			cryptoResponseDto.setData(CryptoUtil.encodeToURLSafeBase64(CryptoUtil.combineByteArray(encryptedData, finalEncKeyBytes, keySplitter)));
 			return cryptoResponseDto;
 		} 
 		byte[] certThumbprint = cryptomanagerUtil.getCertificateThumbprint(certificate);
 		byte[] concatedData = cryptomanagerUtil.concatCertThumbprint(certThumbprint, encryptedSymmetricKey);
 		byte[] finalEncKeyBytes = cryptomanagerUtil.concatByteArrays(headerBytes, concatedData);
-		cryptoResponseDto.setData(CryptoUtil.encodeBase64(CryptoUtil.combineByteArray(encryptedData, 
+		cryptoResponseDto.setData(CryptoUtil.encodeToURLSafeBase64(CryptoUtil.combineByteArray(encryptedData, 
 							finalEncKeyBytes, keySplitter)));
 		return cryptoResponseDto;
 	}
@@ -158,7 +154,7 @@ public class CryptomanagerServiceImpl implements CryptomanagerService {
 						"Provided AAD value is null or empty byte array. So generating random 32 bytes for AAD.");
 		byte[] aad = cryptomanagerUtil.generateRandomBytes(CryptomanagerConstant.GCM_AAD_LENGTH);
 		byte[] nonce = copyOfRange(aad, 0, CryptomanagerConstant.GCM_NONCE_LENGTH);
-		byte[] encData = cryptoCore.symmetricEncrypt(secretKey, CryptoUtil.decodeBase64(data),
+		byte[] encData = cryptoCore.symmetricEncrypt(secretKey, cryptomanagerUtil.decodeBase64Data(data),
 								nonce, aad);
 		return cryptomanagerUtil.concatByteArrays(aad, encData);
 	}
@@ -176,34 +172,34 @@ public class CryptomanagerServiceImpl implements CryptomanagerService {
 						"Request for data decryption.");
 
 		int keyDemiliterIndex = 0;
-		byte[] encryptedHybridData = CryptoUtil.decodeBase64(cryptoRequestDto.getData());
+		byte[] encryptedHybridData = cryptomanagerUtil.decodeBase64Data(cryptoRequestDto.getData());
 		keyDemiliterIndex = CryptoUtil.getSplitterIndex(encryptedHybridData, keyDemiliterIndex, keySplitter);
 		byte[] encryptedKey = copyOfRange(encryptedHybridData, 0, keyDemiliterIndex);
 		byte[] encryptedData = copyOfRange(encryptedHybridData, keyDemiliterIndex + keySplitter.length(),
 				encryptedHybridData.length);
 		
 		byte[] headerBytes = cryptomanagerUtil.parseEncryptKeyHeader(encryptedKey);
-		cryptoRequestDto.setData(CryptoUtil.encodeBase64(copyOfRange(encryptedKey, headerBytes.length, encryptedKey.length)));
+		cryptoRequestDto.setData(CryptoUtil.encodeToURLSafeBase64(copyOfRange(encryptedKey, headerBytes.length, encryptedKey.length)));
 		SecretKey decryptedSymmetricKey = cryptomanagerUtil.getDecryptedSymmetricKey(cryptoRequestDto);
 		LOGGER.info(CryptomanagerConstant.SESSIONID, CryptomanagerConstant.DECRYPT, CryptomanagerConstant.DECRYPT, 
-						"Session Decryption completed.");
+						"Session Key Decryption completed.");
 		final byte[] decryptedData;
 		if (cryptomanagerUtil.isValidSalt(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getSalt()))) {
 			decryptedData = cryptoCore.symmetricDecrypt(decryptedSymmetricKey, encryptedData,
-					CryptoUtil.decodeBase64(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getSalt())),
-					CryptoUtil.decodeBase64(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getAad())));
+							cryptomanagerUtil.decodeBase64Data(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getSalt())),
+							cryptomanagerUtil.decodeBase64Data(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getAad())));
 		} else {
 			if (Arrays.equals(headerBytes, CryptomanagerConstant.VERSION_RSA_2048)) {
 				decryptedData = splitAadAndDecryptData(decryptedSymmetricKey, encryptedData);
 			} else {
 				decryptedData = cryptoCore.symmetricDecrypt(decryptedSymmetricKey, encryptedData,
-						CryptoUtil.decodeBase64(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getAad())));
+							cryptomanagerUtil.decodeBase64Data(CryptomanagerUtils.nullOrTrim(cryptoRequestDto.getAad())));
 			}
 		}
 		LOGGER.info(CryptomanagerConstant.SESSIONID, CryptomanagerConstant.DECRYPT, CryptomanagerConstant.DECRYPT, 
 						"Data decryption completed.");
 		CryptomanagerResponseDto cryptoResponseDto = new CryptomanagerResponseDto();
-		cryptoResponseDto.setData(CryptoUtil.encodeBase64(decryptedData));
+		cryptoResponseDto.setData(CryptoUtil.encodeToURLSafeBase64(decryptedData));
 		return cryptoResponseDto;
 	}
 
@@ -251,7 +247,7 @@ public class CryptomanagerServiceImpl implements CryptomanagerService {
 		System.arraycopy(gcmNonce, 0, finalEncryptedData, pbeSalt.length, gcmNonce.length);
 		System.arraycopy(encryptedData, 0, finalEncryptedData, pbeSalt.length + gcmNonce.length, encryptedData.length);
 		CryptoWithPinResponseDto responseDto = new CryptoWithPinResponseDto();
-		responseDto.setData(CryptoUtil.encodeBase64(finalEncryptedData));
+		responseDto.setData(CryptoUtil.encodeToURLSafeBase64(finalEncryptedData));
 		return responseDto;
 	}
 
@@ -277,7 +273,7 @@ public class CryptomanagerServiceImpl implements CryptomanagerService {
 						CryptomanagerErrorCode.INVALID_REQUEST.getErrorMessage());
 		}
 
-		byte[] decodedEncryptedData = CryptoUtil.decodeBase64(dataToDec);
+		byte[] decodedEncryptedData = CryptoUtil.decodeURLSafeBase64(dataToDec);
 		byte[] pbeSalt = Arrays.copyOfRange(decodedEncryptedData, 0, PBE_SALT_LENGTH);
 		byte[] gcmNonce = Arrays.copyOfRange(decodedEncryptedData, PBE_SALT_LENGTH, PBE_SALT_LENGTH + GCM_NONCE_LENGTH);
 		byte[] encryptedData = Arrays.copyOfRange(decodedEncryptedData, PBE_SALT_LENGTH + GCM_NONCE_LENGTH,	decodedEncryptedData.length);
