@@ -33,7 +33,8 @@ public class TokenIDGeneratorController {
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	@ResponseFilter
 	@GetMapping(value = "/{uin}/{partnercode}")
-	@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','ID_AUTHENTICATION','RESIDENT')")
+	@PreAuthorize("hasAnyRole(@authorizedRoles.getGetuinpartnercode())")
+	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','ID_AUTHENTICATION','RESIDENT')")
 	public ResponseWrapper<TokenIDResponseDto> generateTokenID(@ApiParam("uin of user") @PathVariable("uin") String uin,
 			@ApiParam("Partner Code") @PathVariable("partnercode") String partnerCode) {
 		ResponseWrapper<TokenIDResponseDto> response = new ResponseWrapper<>();

@@ -64,7 +64,8 @@ public class PartnerCertManagerController {
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 		// @PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL',
 		// 'PMS_ADMIN')")
-	@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','PMS_ADMIN')")
+	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','PMS_ADMIN')")
+	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostuploadcacertificate())")
 	@ResponseFilter
 	@PostMapping(value = "/uploadCACertificate", produces = "application/json")
 	public ResponseWrapper<CACertificateResponseDto> uploadCACertificate(
@@ -89,7 +90,8 @@ public class PartnerCertManagerController {
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	// @PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL',
 	// 'ID_AUTHENTICATION', 'PMS_USER')")
-	@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','PMS_ADMIN','PMS_USER')")
+	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostuploadpartnercertificate())")
+	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','PMS_ADMIN','PMS_USER')")
 	@ResponseFilter
 	@PostMapping(value = "/uploadPartnerCertificate", produces = "application/json")
 	public ResponseWrapper<PartnerCertificateResponseDto> uploadPartnerCertificate(
@@ -114,8 +116,9 @@ public class PartnerCertManagerController {
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	// @PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL',
 	// 'ID_AUTHENTICATION', 'PMS_USER')")
-	@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','PMS_ADMIN','PMS_USER')")
+	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','PMS_ADMIN','PMS_USER')")
 	@ResponseFilter
+	@PreAuthorize("hasAnyRole(@authorizedRoles.getGetgetpartnercertificatepartnercertid())")
 	@GetMapping(value = "/getPartnerCertificate/{partnerCertId}")
 	public ResponseWrapper<PartnerCertDownloadResponeDto> getPartnerCertificate(
 			@ApiParam("To download re-signed partner certificate.") @PathVariable("partnerCertId") String partnerCertId) {
@@ -140,8 +143,9 @@ public class PartnerCertManagerController {
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	// @PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL',
 	// 'ID_AUTHENTICATION', 'PMS_USER')")
-	@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','PMS_ADMIN','PMS_USER')")
+	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','PMS_ADMIN','PMS_USER')")
 	@ResponseFilter
+	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostverifycertificatetrust())")
 	@PostMapping(value = "/verifyCertificateTrust", produces = "application/json")
 	public ResponseWrapper<CertificateTrustResponeDto> verifyCertificateTrust(
 			@ApiParam("Upload Partner Certificates.") @RequestBody @Valid RequestWrapper<CertificateTrustRequestDto> certificateTrustRequestDto) {
