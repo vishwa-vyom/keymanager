@@ -285,7 +285,7 @@ class LocalClientCryptoServiceImpl implements ClientCryptoService {
         builder.append(InetAddress.getLocalHost().getHostName().toLowerCase());
         builder.append("\r\n");
         builder.append("PublicKey: ");
-        builder.append(CryptoUtil.encodeBase64String(publicKey.getEncoded()));
+        builder.append(CryptoUtil.encodeToURLSafeBase64(publicKey.getEncoded()));
         builder.append("\r\n");
         builder.append("KeyIndex: ");
         builder.append(CryptoUtil.computeFingerPrint(publicKey.getEncoded(), null).toLowerCase());
