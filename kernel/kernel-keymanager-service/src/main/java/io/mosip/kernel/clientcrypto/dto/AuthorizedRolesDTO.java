@@ -9,7 +9,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 
-@Component("authorizedRoles")
+@Component("clientCryptoAuthRoles")
 @ConfigurationProperties(prefix = "mosip.role.keymanager")
 @Getter
 @Setter

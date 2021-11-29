@@ -63,7 +63,7 @@ public class CryptomanagerController {
 			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION','TEST', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN','RESIDENT')")
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostencrypt())")
+	@PreAuthorize("hasAnyRole(@cryptoManagerAuthRoles.getPostencrypt())")
 	@ResponseFilter
 	@PostMapping(value = "/encrypt", produces = "application/json")
 	public ResponseWrapper<CryptomanagerResponseDto> encrypt(
@@ -87,7 +87,7 @@ public class CryptomanagerController {
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION', 'TEST', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN','RESIDENT')")
 	@ResponseFilter
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostdecrypt())")
+	@PreAuthorize("hasAnyRole(@cryptoManagerAuthRoles.getPostdecrypt())")
 	@PostMapping(value = "/decrypt", produces = "application/json")
 	public ResponseWrapper<CryptomanagerResponseDto> decrypt(
 			@ApiParam("Salt and Data to decrypt in BASE64 encoding with meta-data") @RequestBody @Valid RequestWrapper<CryptomanagerRequestDto> cryptomanagerRequestDto) {
@@ -111,7 +111,7 @@ public class CryptomanagerController {
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION','TEST', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN','RESIDENT')")
 	@ResponseFilter
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostencryptwithpin())")
+	@PreAuthorize("hasAnyRole(@cryptoManagerAuthRoles.getPostencryptwithpin())")
 	@PostMapping(value = "/encryptWithPin", produces = "application/json")
 	public ResponseWrapper<CryptoWithPinResponseDto> encryptWithPin(
 			@ApiParam("Pin and Data to encrypt") @RequestBody @Valid RequestWrapper<CryptoWithPinRequestDto> requestDto) {
@@ -135,7 +135,7 @@ public class CryptomanagerController {
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION', 'TEST', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN','RESIDENT')")
 	@ResponseFilter
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostdecryptwithpin())")
+	@PreAuthorize("hasAnyRole(@cryptoManagerAuthRoles.getPostdecryptwithpin())")
 	@PostMapping(value = "/decryptWithPin", produces = "application/json")
 	public ResponseWrapper<CryptoWithPinResponseDto> decryptWithPin(
 			@ApiParam("Pin and Data to decrypt") @RequestBody @Valid RequestWrapper<CryptoWithPinRequestDto> requestDto) {
@@ -160,7 +160,7 @@ public class CryptomanagerController {
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION','TEST', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN','RESIDENT')")
 	@ResponseFilter
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostencryptdt())")
+	@PreAuthorize("hasAnyRole(@cryptoManagerAuthRoles.getPostencryptdt())")
 	@PostMapping(value = "/encryptDt", produces = "application/json")
 	public ResponseWrapper<CryptomanagerResponseDto> encryptDt(
 			@ApiParam("Salt and Data to encrypt in BASE64 encoding with meta-data") @RequestBody @Valid RequestWrapper<CryptomanagerRequestDto> cryptomanagerRequestDto) {
@@ -185,7 +185,7 @@ public class CryptomanagerController {
 			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION', 'TEST', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN','RESIDENT')")
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostdecryptdt())")
+	@PreAuthorize("hasAnyRole(@cryptoManagerAuthRoles.getPostdecryptdt())")
 	@ResponseFilter
 	@PostMapping(value = "/decryptDt", produces = "application/json")
 	public ResponseWrapper<CryptomanagerResponseDto> decryptDt(

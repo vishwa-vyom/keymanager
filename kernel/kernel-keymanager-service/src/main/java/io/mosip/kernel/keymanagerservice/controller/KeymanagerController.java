@@ -69,7 +69,7 @@ public class KeymanagerController {
 			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','KEY_MAKER', 'INDIVIDUAL','REGISTRATION_PROCESSOR','REGISTRATION_ADMIN','REGISTRATION_SUPERVISOR','REGISTRATION_OFFICER','ID_AUTHENTICATION','TEST','PRE_REGISTRATION_ADMIN','RESIDENT')")
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostgeneratemasterkeyobjecttype())")
+	@PreAuthorize("hasAnyRole(@KeyManagerAuthRoles.getPostgeneratemasterkeyobjecttype())")
 	@ResponseFilter
 	@PostMapping(value = "/generateMasterKey/{objectType}")
 	public ResponseWrapper<KeyPairGenerateResponseDto> generateMasterKey(
@@ -95,7 +95,7 @@ public class KeymanagerController {
 			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','REGISTRATION_PROCESSOR','REGISTRATION_ADMIN','REGISTRATION_SUPERVISOR','REGISTRATION_OFFICER','ID_AUTHENTICATION','TEST','PRE_REGISTRATION_ADMIN','RESIDENT')")
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getGetgetcertificate())")
+	@PreAuthorize("hasAnyRole(@KeyManagerAuthRoles.getGetgetcertificate())")
 	@ResponseFilter
 	@GetMapping(value = "/getCertificate")
 	public ResponseWrapper<KeyPairGenerateResponseDto> getCertificate(
@@ -120,7 +120,7 @@ public class KeymanagerController {
 			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','REGISTRATION_PROCESSOR','REGISTRATION_ADMIN','REGISTRATION_SUPERVISOR','REGISTRATION_OFFICER','ID_AUTHENTICATION','TEST','PRE_REGISTRATION_ADMIN','RESIDENT')")
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostgeneratecsr())")
+	@PreAuthorize("hasAnyRole(@KeyManagerAuthRoles.getPostgeneratecsr())")
 	@ResponseFilter
 	@PostMapping(value = "/generateCSR")
 	public ResponseWrapper<KeyPairGenerateResponseDto> generateCSR(
@@ -145,7 +145,7 @@ public class KeymanagerController {
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','REGISTRATION_PROCESSOR','REGISTRATION_ADMIN','REGISTRATION_SUPERVISOR','REGISTRATION_OFFICER','ID_AUTHENTICATION','TEST','PRE_REGISTRATION_ADMIN','RESIDENT')")
 	@ResponseFilter
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostuploadcertificate())")
+	@PreAuthorize("hasAnyRole(@KeyManagerAuthRoles.getPostuploadcertificate())")
 	@PostMapping(value = "/uploadCertificate")
 	public ResponseWrapper<UploadCertificateResponseDto> uploadCertificate(
 		@RequestBody @Valid RequestWrapper<UploadCertificateRequestDto> uploadCertRequestDto) {
@@ -168,7 +168,7 @@ public class KeymanagerController {
 			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','REGISTRATION_PROCESSOR','REGISTRATION_ADMIN','REGISTRATION_SUPERVISOR','REGISTRATION_OFFICER','ID_AUTHENTICATION','TEST','PRE_REGISTRATION_ADMIN','RESIDENT')")
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostuploadotherdomaincertificate())")
+	@PreAuthorize("hasAnyRole(@KeyManagerAuthRoles.getPostuploadotherdomaincertificate())")
 	@ResponseFilter
 	@PostMapping(value = "/uploadOtherDomainCertificate")
 	public ResponseWrapper<UploadCertificateResponseDto> uploadOtherDomainCertificate(
@@ -192,7 +192,7 @@ public class KeymanagerController {
 			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','REGISTRATION_PROCESSOR','REGISTRATION_ADMIN','REGISTRATION_SUPERVISOR','REGISTRATION_OFFICER','ID_AUTHENTICATION','TEST','PRE_REGISTRATION_ADMIN','RESIDENT')")
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostgeneratesymmetrickey())")
+	@PreAuthorize("hasAnyRole(@KeyManagerAuthRoles.getPostgeneratesymmetrickey())")
 	@ResponseFilter
 	@PostMapping(value = "/generateSymmetricKey")
 	public ResponseWrapper<SymmetricKeyGenerateResponseDto> generateSymmetricKey(
@@ -216,7 +216,7 @@ public class KeymanagerController {
 			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','REGISTRATION_PROCESSOR','REGISTRATION_ADMIN','REGISTRATION_SUPERVISOR','REGISTRATION_OFFICER','ID_AUTHENTICATION','TEST','PRE_REGISTRATION_ADMIN','RESIDENT')")
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPutrevokekey())")
+	@PreAuthorize("hasAnyRole(@KeyManagerAuthRoles.getPutrevokekey())")
 	@ResponseFilter
 	@PutMapping(value = "/revokeKey")
 	public ResponseWrapper<RevokeKeyResponseDto> revokeKey(
