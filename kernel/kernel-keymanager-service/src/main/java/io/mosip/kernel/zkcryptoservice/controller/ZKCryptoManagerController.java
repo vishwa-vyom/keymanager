@@ -59,7 +59,7 @@ public class ZKCryptoManagerController {
 			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION','TEST', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN','RESIDENT')")
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostzkencrypt())")
+	@PreAuthorize("hasAnyRole(@zkAuthRoles.getPostzkencrypt())")
 	@ResponseFilter
 	@PostMapping(value = "/zkEncrypt", produces = "application/json")
 	public ResponseWrapper<ZKCryptoResponseDto> zkEncrypt(
@@ -83,7 +83,7 @@ public class ZKCryptoManagerController {
 			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION', 'TEST', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN','RESIDENT')")
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostzkdecrypt())")
+	@PreAuthorize("hasAnyRole(@zkAuthRoles.getPostzkdecrypt())")
 	@ResponseFilter
 	@PostMapping(value = "/zkDecrypt", produces = "application/json")
 	public ResponseWrapper<ZKCryptoResponseDto> zkDecrypt(
@@ -107,7 +107,7 @@ public class ZKCryptoManagerController {
 			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION', 'TEST', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN','RESIDENT')")
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostzkreencryptrandomkey())")
+	@PreAuthorize("hasAnyRole(@zkAuthRoles.getPostzkreencryptrandomkey())")
 	@ResponseFilter
 	@PostMapping(value = "/zkReEncryptRandomKey", produces = "application/json")
 	public ResponseWrapper<ReEncryptRandomKeyResponseDto> zkReEncryptRandomKey(

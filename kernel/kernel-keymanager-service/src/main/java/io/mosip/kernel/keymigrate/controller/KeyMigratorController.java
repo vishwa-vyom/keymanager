@@ -61,7 +61,7 @@ public class KeyMigratorController {
 			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	//@PreAuthorize("hasAnyRole('KEY_MIGRATION_ADMIN')")
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostmigratebasekey())")
+	@PreAuthorize("hasAnyRole(@KeymigrateAuthRoles.getPostmigratebasekey())")
 	@ResponseFilter
 	@PostMapping(value = "/migrateBaseKey", produces = "application/json")
 	public ResponseWrapper<KeyMigrateBaseKeyResponseDto> migrateBaseKey(
@@ -85,7 +85,7 @@ public class KeyMigratorController {
 			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	//@PreAuthorize("hasAnyRole('KEY_MIGRATION_ADMIN')")
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getGetzktempcertificate())")
+	@PreAuthorize("hasAnyRole(@KeymigrateAuthRoles.getGetzktempcertificate())")
 	@ResponseFilter
 	@GetMapping(value = "/getZKTempCertificate", produces = "application/json")
 	public ResponseWrapper<ZKKeyMigrateCertficateResponseDto> getZKTempCertificate() {
@@ -108,7 +108,7 @@ public class KeyMigratorController {
 			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	//@PreAuthorize("hasAnyRole('KEY_MIGRATION_ADMIN')")
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostmigratezkkeys())")
+	@PreAuthorize("hasAnyRole(@KeymigrateAuthRoles.getPostmigratezkkeys())")
 	@ResponseFilter
 	@PostMapping(value = "/migrateZKKeys", produces = "application/json")
 	public ResponseWrapper<ZKKeyMigrateResponseDto> migrateZKKeys(

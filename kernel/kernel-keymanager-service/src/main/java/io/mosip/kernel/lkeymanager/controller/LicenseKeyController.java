@@ -57,7 +57,7 @@ public class LicenseKeyController {
 			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION','TEST', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN','RESIDENT')")
-	@PreAuthorize("hasAnyRole(@authorizedRoles.getPostlicensegenerate())")
+	@PreAuthorize("hasAnyRole(@lkeyAuthRoles.getPostlicensegenerate())")
 	@ResponseFilter
 	@PostMapping(value = "/license/generate")
 	public ResponseWrapper<LicenseKeyGenerationResponseDto> generateLicenseKey(
