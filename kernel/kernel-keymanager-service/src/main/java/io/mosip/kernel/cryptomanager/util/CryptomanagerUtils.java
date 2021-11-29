@@ -146,7 +146,7 @@ public class CryptomanagerUtils {
 	 * Parse a date string of pattern UTC_DATETIME_PATTERN into
 	 * {@link LocalDateTime}.
 	 *
-	 * @param dateTimeof type {@link String} of pattern UTC_DATETIME_PATTERN
+	 * @param dateTime of type {@link String} of pattern UTC_DATETIME_PATTERN
 	 * @return a {@link LocalDateTime} of given pattern
 	 */
 	public LocalDateTime parseToLocalDateTime(String dateTime) {
