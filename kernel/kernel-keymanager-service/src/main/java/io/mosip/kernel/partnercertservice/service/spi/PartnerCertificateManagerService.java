@@ -50,5 +50,13 @@ public interface PartnerCertificateManagerService {
      * @return {@link CertificateTrustResponeDto} instance
     */
     public CertificateTrustResponeDto verifyCertificateTrust(CertificateTrustRequestDto certificateTrustRequestDto);
-    
+
+
+    /**
+     * Function to Purge trust store cache for the provided partner domain.
+     * 
+     * @param String partnerDomain
+     * @return void 
+    */
+    public void purgeTrustStoreCache(String partnerDomain);
 }

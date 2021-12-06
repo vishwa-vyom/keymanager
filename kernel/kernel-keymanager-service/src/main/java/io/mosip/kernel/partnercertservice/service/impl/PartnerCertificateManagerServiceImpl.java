@@ -105,6 +105,10 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
     @Value("${mosip.kernel.partner.resign.ftm.domain.certs:false}")
     private boolean resignFTMDomainCerts;
 
+    @Value("${mosip.kernel.partner.truststore.cache.disable:false}")
+    private boolean disableTrustStoreCache;
+
+
     /**
      * Utility to generate Metadata
      */
@@ -133,19 +137,21 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
         // Added Cache2kBuilder in the postConstruct because expire value 
         // configured in properties are getting injected after this object creation.
         // Cache2kBuilder constructor is throwing error.
-        caCertTrustStore = new Cache2kBuilder<String, Object>() {}
-        // added hashcode because test case execution failing with IllegalStateException: Cache already created
-        .name("caCertTrustStore-" + this.hashCode()) 
-        .expireAfterWrite(cacheExpireInMins, TimeUnit.MINUTES)
-        .entryCapacity(10)
-        .refreshAhead(true)
-        .loaderThreadCount(1)
-        .loader((partnerDomain) -> {
-                LOGGER.info(PartnerCertManagerConstants.SESSIONID, PartnerCertManagerConstants.EMPTY,
-                          PartnerCertManagerConstants.EMPTY, "Loading CA TrustStore Cache for partnerDomain: " + partnerDomain);
-                return certDBHelper.getTrustAnchors(partnerDomain);
-        })
-        .build();
+        if (!disableTrustStoreCache) {
+                caCertTrustStore = new Cache2kBuilder<String, Object>() {}
+                // added hashcode because test case execution failing with IllegalStateException: Cache already created
+                .name("caCertTrustStore-" + this.hashCode()) 
+                .expireAfterWrite(cacheExpireInMins, TimeUnit.MINUTES)
+                .entryCapacity(10)
+                .refreshAhead(true)
+                .loaderThreadCount(1)
+                .loader((partnerDomain) -> {
+                        LOGGER.info(PartnerCertManagerConstants.SESSIONID, PartnerCertManagerConstants.EMPTY,
+                                PartnerCertManagerConstants.EMPTY, "Loading CA TrustStore Cache for partnerDomain: " + partnerDomain);
+                        return certDBHelper.getTrustAnchors(partnerDomain);
+                })
+                .build();
+        }
     }
 
     @Override
@@ -236,7 +242,7 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
                         partnerDomain);
                 uploadedCert = true;
             }
-            caCertTrustStore.expireAt(partnerDomain, Expiry.NOW);
+            purgeCache(partnerDomain);
         }
         CACertificateResponseDto responseDto = new CACertificateResponseDto();
         if (uploadedCert && (certsCount == 1 || !foundError))
@@ -292,7 +298,8 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
     private List<? extends Certificate> getCertificateTrustPath(X509Certificate reqX509Cert, String partnerDomain) {
 
         try {
-            Map<String, Set<?>> trustStoreMap = (Map<String, Set<?>>) caCertTrustStore.get(partnerDomain); //certDBHelper.getTrustAnchors(partnerDomain);
+            Map<String, Set<?>> trustStoreMap = !disableTrustStoreCache ? (Map<String, Set<?>>) caCertTrustStore.get(partnerDomain):
+                                                        certDBHelper.getTrustAnchors(partnerDomain);
             Set<TrustAnchor> rootTrustAnchors = (Set<TrustAnchor>) trustStoreMap
                     .get(PartnerCertManagerConstants.TRUST_ROOT);
             Set<X509Certificate> interCerts = (Set<X509Certificate>) trustStoreMap
@@ -575,5 +582,16 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
         return responseDto;
     }
     
-    
+    @Override
+    public void purgeTrustStoreCache(String partnerDomain) {
+        purgeCache(partnerDomain);
+        LOGGER.info(PartnerCertManagerConstants.SESSIONID, PartnerCertManagerConstants.UPLOAD_PARTNER_CERT, PartnerCertManagerConstants.EMPTY,
+                "Trust Store Cache Purge for partner domain " + partnerDomain);
+    }
+
+    private void purgeCache(String partnerDomain) {
+        if(!disableTrustStoreCache) {
+            caCertTrustStore.expireAt(partnerDomain, Expiry.NOW);
+        }
+    }
 }

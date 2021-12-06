@@ -2,6 +2,7 @@ package io.mosip.kernel.tokenidgenerator.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,6 +19,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+@CrossOrigin
 @RestController
 @Tag(name = "tokenidgenerator", description = "Operation related to tokenid generator")
 public class TokenIDGeneratorController {
@@ -32,7 +34,7 @@ public class TokenIDGeneratorController {
 			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	@ResponseFilter
-	@GetMapping(value = "/{uin}/{partnercode}")
+	@GetMapping(value = "/tokenid/{uin}/{partnercode}")
 	@PreAuthorize("hasAnyRole(@tokenAuthRoles.getGetuinpartnercode())")
 	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','ID_AUTHENTICATION','RESIDENT')")
 	public ResponseWrapper<TokenIDResponseDto> generateTokenID(@ApiParam("uin of user") @PathVariable("uin") String uin,
