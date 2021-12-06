@@ -237,6 +237,6 @@ public class CryptomanagerUtils {
 			LOGGER.debug(CryptomanagerConstant.SESSIONID, CryptomanagerConstant.ENCRYPT, "", 
 				"Error Decoding Base64 URL Safe data, trying with Base64 normal decode.");
 		}
-		return CryptoUtil.decodeBase64(anyBase64EncodedData);
+		return CryptoUtil.decodePlainBase64(anyBase64EncodedData);
 	}
 }
