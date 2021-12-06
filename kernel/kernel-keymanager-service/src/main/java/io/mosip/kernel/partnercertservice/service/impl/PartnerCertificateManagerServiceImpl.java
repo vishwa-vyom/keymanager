@@ -213,6 +213,7 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
                 certDBHelper.storeCACertificate(certId, certSubject, certIssuer, certId, reqX509Cert, certThumbprint,
                         partnerDomain);
                 uploadedCert = true;
+
             } else {
                 LOGGER.info(PartnerCertManagerConstants.SESSIONID, PartnerCertManagerConstants.UPLOAD_CA_CERT,
                         PartnerCertManagerConstants.EMPTY, "Adding Intermediate Certificates in store.");
@@ -235,8 +236,8 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
                         partnerDomain);
                 uploadedCert = true;
             }
+            caCertTrustStore.expireAt(partnerDomain, Expiry.NOW);
         }
-        caCertTrustStore.expireAt(partnerDomain, Expiry.NOW);
         CACertificateResponseDto responseDto = new CACertificateResponseDto();
         if (uploadedCert && (certsCount == 1 || !foundError))
             responseDto.setStatus(PartnerCertManagerConstants.SUCCESS_UPLOAD);
@@ -573,5 +574,6 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
         responseDto.setStatus(certValid);     
         return responseDto;
     }
+    
     
 }
