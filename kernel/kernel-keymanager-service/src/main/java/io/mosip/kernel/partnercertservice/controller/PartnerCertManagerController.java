@@ -23,8 +23,13 @@ import io.mosip.kernel.partnercertservice.dto.PartnerCertDownloadResponeDto;
 import io.mosip.kernel.partnercertservice.dto.PartnerCertificateRequestDto;
 import io.mosip.kernel.partnercertservice.dto.PartnerCertificateResponseDto;
 import io.mosip.kernel.partnercertservice.service.spi.PartnerCertificateManagerService;
-import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * Rest Controller for Partner Certificate Management includes certificate Validation and certificate Storage.
@@ -36,7 +41,7 @@ import io.swagger.annotations.ApiParam;
 
 @CrossOrigin
 @RestController
-@Api(value = "Operation related to partner certificate management.", tags = { "partnercertmanager" })
+@Tag(name = "partnercertmanager", description = "Operation related to partner certificate management")
 public class PartnerCertManagerController {
 	
 	/**
@@ -51,9 +56,16 @@ public class PartnerCertManagerController {
 	 * @param caCertRequestDto {@link CACertificateRequestDto} request
 	 * @return {@link CACertficateResponseDto} Upload Success
 	 */
+	@Operation(summary = "To Upload CA/Sub-CA certificates", description = "To Upload CA/Sub-CA certificates", tags = { "partnercertmanager" })
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Success or you may find errors in error array in response"),
+			@ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 		// @PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL',
 		// 'PMS_ADMIN')")
-	@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','PMS_ADMIN')")
+	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','PMS_ADMIN')")
+	@PreAuthorize("hasAnyRole(@keyManAuthRoles.getPostuploadcacertificate())")
 	@ResponseFilter
 	@PostMapping(value = "/uploadCACertificate", produces = "application/json")
 	public ResponseWrapper<CACertificateResponseDto> uploadCACertificate(
@@ -70,9 +82,16 @@ public class PartnerCertManagerController {
 	 * @param partnerCertRequestDto {@link PartnerCertificateRequestDto} request
 	 * @return {@link PartnerCertificateResponseDto} signed certificate response
 	 */
+	@Operation(summary = "To Upload Partner Certificate", description = "To Upload Partner Certificate", tags = { "partnercertmanager" })
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Success or you may find errors in error array in response"),
+			@ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	// @PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL',
 	// 'ID_AUTHENTICATION', 'PMS_USER')")
-	@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','PMS_ADMIN','PMS_USER')")
+	@PreAuthorize("hasAnyRole(@keyManAuthRoles.getPostuploadpartnercertificate())")
+	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','PMS_ADMIN','PMS_USER')")
 	@ResponseFilter
 	@PostMapping(value = "/uploadPartnerCertificate", produces = "application/json")
 	public ResponseWrapper<PartnerCertificateResponseDto> uploadPartnerCertificate(
@@ -89,10 +108,17 @@ public class PartnerCertManagerController {
 	 * @param certDownloadRequestDto {@link PartnerCertDownloadRequestDto} request
 	 * @return {@link PartnerCertDownloadResponeDto} encrypted Data
 	 */
+	@Operation(summary = "To Download Partner Certificate", description = "To Download Partner Certificate", tags = { "partnercertmanager" })
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Success or you may find errors in error array in response"),
+			@ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	// @PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL',
 	// 'ID_AUTHENTICATION', 'PMS_USER')")
-	@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','PMS_ADMIN','PMS_USER')")
+	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','PMS_ADMIN','PMS_USER')")
 	@ResponseFilter
+	@PreAuthorize("hasAnyRole(@keyManAuthRoles.getGetgetpartnercertificatepartnercertid())")
 	@GetMapping(value = "/getPartnerCertificate/{partnerCertId}")
 	public ResponseWrapper<PartnerCertDownloadResponeDto> getPartnerCertificate(
 			@ApiParam("To download re-signed partner certificate.") @PathVariable("partnerCertId") String partnerCertId) {
@@ -109,10 +135,17 @@ public class PartnerCertManagerController {
 	 * @param certificateTrustRequestDto {@CertificateTrustRequestDto CertificateTrustDto} request
 	 * @return {@link CertificateTrustResponeDto} certificate verify response
 	 */
+	@Operation(summary = "To Upload Partner Certificate", description = "To Upload Partner Certificate", tags = { "partnercertmanager" })
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Success or you may find errors in error array in response"),
+			@ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	// @PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL',
 	// 'ID_AUTHENTICATION', 'PMS_USER')")
-	@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','PMS_ADMIN','PMS_USER')")
+	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','PMS_ADMIN','PMS_USER')")
 	@ResponseFilter
+	@PreAuthorize("hasAnyRole(@keyManAuthRoles.getPostverifycertificatetrust())")
 	@PostMapping(value = "/verifyCertificateTrust", produces = "application/json")
 	public ResponseWrapper<CertificateTrustResponeDto> verifyCertificateTrust(
 			@ApiParam("Upload Partner Certificates.") @RequestBody @Valid RequestWrapper<CertificateTrustRequestDto> certificateTrustRequestDto) {

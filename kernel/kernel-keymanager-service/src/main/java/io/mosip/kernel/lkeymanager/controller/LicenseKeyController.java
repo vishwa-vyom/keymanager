@@ -1,6 +1,7 @@
 package io.mosip.kernel.lkeymanager.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,6 +17,12 @@ import io.mosip.kernel.lkeymanager.dto.LicenseKeyGenerationDto;
 import io.mosip.kernel.lkeymanager.dto.LicenseKeyGenerationResponseDto;
 import io.mosip.kernel.lkeymanager.dto.LicenseKeyMappingDto;
 import io.mosip.kernel.lkeymanager.dto.LicenseKeyMappingResponseDto;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * Controller class that provides various methods for license key management
@@ -28,6 +35,7 @@ import io.mosip.kernel.lkeymanager.dto.LicenseKeyMappingResponseDto;
  *
  */
 @RestController
+@Tag(name = "licensekey", description = "Operation related to License Key Management")
 public class LicenseKeyController {
 	/**
 	 * Autowired reference for {@link LicenseKeyManagerService}.
@@ -42,6 +50,14 @@ public class LicenseKeyController {
 	 *                                object wrapped in {@link RequestWrapper}.
 	 * @return the response entity.
 	 */
+	@Operation(summary = "This method will generate license key against a certain TSP ID", description = "Endpoint for Encrypt the data", tags = { "licensekey" })
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Success or you may find errors in error array in response"),
+			@ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
+	//@PreAuthorize("hasAnyRole('ZONAL_ADMIN','GLOBAL_ADMIN','INDIVIDUAL','ID_AUTHENTICATION','TEST', 'REGISTRATION_ADMIN', 'REGISTRATION_SUPERVISOR', 'REGISTRATION_OFFICER', 'REGISTRATION_PROCESSOR','PRE_REGISTRATION_ADMIN','RESIDENT')")
+	@PreAuthorize("hasAnyRole(@lkeyAuthRoles.getPostlicensegenerate())")
 	@ResponseFilter
 	@PostMapping(value = "/license/generate")
 	public ResponseWrapper<LicenseKeyGenerationResponseDto> generateLicenseKey(
@@ -61,6 +77,12 @@ public class LicenseKeyController {
 	 * @param licenseKeyMappingDto the {@link LicenseKeyMappingDto}.
 	 * @return the response entity.
 	 */
+	@Operation(summary = "This method will map license key to several permissions. The permissions provided must be present in the master list", description = "Endpoint for Encrypt the data", tags = { "licensekey" })
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Success or you may find errors in error array in response"),
+			@ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	@ResponseFilter
 	@PostMapping(value = "/license/permission")
 	public ResponseWrapper<LicenseKeyMappingResponseDto> mapLicenseKey(
@@ -81,6 +103,12 @@ public class LicenseKeyController {
 	 *                   fetched.
 	 * @return the permissions fetched.
 	 */
+	@Operation(summary = "This method will fetch the mapped permissions for a license key", description = "Endpoint for Encrypt the data", tags = { "licensekey" })
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Success or you may find errors in error array in response"),
+			@ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
 	@ResponseFilter
 	@GetMapping(value = "/license/permission")
 	public ResponseWrapper<LicenseKeyFetchResponseDto> fetchLicenseKeyPermissions(@RequestParam("tspId") String tspId,

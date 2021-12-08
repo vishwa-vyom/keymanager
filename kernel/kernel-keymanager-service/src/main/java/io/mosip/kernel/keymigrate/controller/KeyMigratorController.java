@@ -11,17 +11,22 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.mosip.kernel.core.http.RequestWrapper;
+import io.mosip.kernel.core.http.ResponseFilter;
+import io.mosip.kernel.core.http.ResponseWrapper;
 import io.mosip.kernel.keymigrate.dto.KeyMigrateBaseKeyRequestDto;
 import io.mosip.kernel.keymigrate.dto.KeyMigrateBaseKeyResponseDto;
 import io.mosip.kernel.keymigrate.dto.ZKKeyMigrateCertficateResponseDto;
 import io.mosip.kernel.keymigrate.dto.ZKKeyMigrateRequestDto;
 import io.mosip.kernel.keymigrate.dto.ZKKeyMigrateResponseDto;
 import io.mosip.kernel.keymigrate.service.spi.KeyMigratorService;
-import io.swagger.annotations.Api;
-import io.mosip.kernel.core.http.RequestWrapper;
-import io.mosip.kernel.core.http.ResponseFilter;
-import io.mosip.kernel.core.http.ResponseWrapper;
 import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * Rest Controller for Key Migration from one HSM to another HSM.
@@ -34,7 +39,7 @@ import io.swagger.annotations.ApiParam;
 @Lazy
 @CrossOrigin
 @RestController
-@Api(value = "Operation related to Key Migration from one HSM to another HSM.", tags = { "keymigrator" })
+@Tag(name = "keymigrator", description = "Operation related to Key Migration from one HSM to another HSM")
 public class KeyMigratorController {
     
     /**
@@ -49,7 +54,14 @@ public class KeyMigratorController {
 	 * @param migrateBaseKeyRequestDto {@link KeyMigrateBaseKeyRequestDto} request
 	 * @return {@link KeyMigrateBaseKeyAddResponseDto} migrate response
 	 */
-	@PreAuthorize("hasAnyRole('KEY_MIGRATION_ADMIN')")
+	@Operation(summary = "Controller for migrating base key", description = "Controller for migrating base key", tags = { "keymigrator" })
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Success or you may find errors in error array in response"),
+			@ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
+	//@PreAuthorize("hasAnyRole('KEY_MIGRATION_ADMIN')")
+	@PreAuthorize("hasAnyRole(@KeymigrateAuthRoles.getPostmigratebasekey())")
 	@ResponseFilter
 	@PostMapping(value = "/migrateBaseKey", produces = "application/json")
 	public ResponseWrapper<KeyMigrateBaseKeyResponseDto> migrateBaseKey(
@@ -66,7 +78,14 @@ public class KeyMigratorController {
 	 * @param migrateBaseKeyRequestDto {@link KeyMigrateBaseKeyRequestDto} request
 	 * @return {@link KeyMigrateBaseKeyAddResponseDto} migrate response
 	 */
-	@PreAuthorize("hasAnyRole('KEY_MIGRATION_ADMIN')")
+	@Operation(summary = "Controller to get the certificate for migrating ZK keys", description = "Controller to get the certificate for migrating ZK keys", tags = { "keymigrator" })
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Success or you may find errors in error array in response"),
+			@ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
+	//@PreAuthorize("hasAnyRole('KEY_MIGRATION_ADMIN')")
+	@PreAuthorize("hasAnyRole(@KeymigrateAuthRoles.getGetzktempcertificate())")
 	@ResponseFilter
 	@GetMapping(value = "/getZKTempCertificate", produces = "application/json")
 	public ResponseWrapper<ZKKeyMigrateCertficateResponseDto> getZKTempCertificate() {
@@ -82,7 +101,14 @@ public class KeyMigratorController {
 	 * @param migrateZKKeysRequestDto {@link ZKKeyMigrateRequestDto} request
 	 * @return {@link ZKKeyMigrateResponseDto} migrate response
 	 */
-	@PreAuthorize("hasAnyRole('KEY_MIGRATION_ADMIN')")
+	@Operation(summary = "Controller for migrating ZK keys", description = "Controller for migrating ZK keys", tags = { "keymigrator" })
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Success or you may find errors in error array in response"),
+			@ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(hidden = true))),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(schema = @Schema(hidden = true))) })
+	//@PreAuthorize("hasAnyRole('KEY_MIGRATION_ADMIN')")
+	@PreAuthorize("hasAnyRole(@KeymigrateAuthRoles.getPostmigratezkkeys())")
 	@ResponseFilter
 	@PostMapping(value = "/migrateZKKeys", produces = "application/json")
 	public ResponseWrapper<ZKKeyMigrateResponseDto> migrateZKKeys(

@@ -146,7 +146,7 @@ public class CryptomanagerUtils {
 	 * Parse a date string of pattern UTC_DATETIME_PATTERN into
 	 * {@link LocalDateTime}.
 	 *
-	 * @param dateTimeof type {@link String} of pattern UTC_DATETIME_PATTERN
+	 * @param dateTime of type {@link String} of pattern UTC_DATETIME_PATTERN
 	 * @return a {@link LocalDateTime} of given pattern
 	 */
 	public LocalDateTime parseToLocalDateTime(String dateTime) {
@@ -237,6 +237,6 @@ public class CryptomanagerUtils {
 			LOGGER.debug(CryptomanagerConstant.SESSIONID, CryptomanagerConstant.ENCRYPT, "", 
 				"Error Decoding Base64 URL Safe data, trying with Base64 normal decode.");
 		}
-		return CryptoUtil.decodeBase64(anyBase64EncodedData);
+		return CryptoUtil.decodePlainBase64(anyBase64EncodedData);
 	}
 }
