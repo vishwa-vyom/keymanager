@@ -227,15 +227,28 @@ public class KeymanagerDBHelper {
             addCertificateThumbprints();
             keyAliases = keyAliasRepository.findByCertThumbprint(certThumbprint);
         }
+        // Mostly should fetch only one object from DB, so considering as first preference.
+        String foundDBAppIdRefId = keyAliases.get(0).getApplicationId() + KeymanagerConstant.HYPHEN + keyAliases.get(0).getReferenceId();
         if (keyAliases.size() > 1) {
-            LOGGER.error(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
-                "More than one key alias found for the provided thumbprint.");
-            throw new KeymanagerServiceException(KeymanagerErrorConstant.MORE_THAN_ONE_KEY_FOUND.getErrorCode(),
-                KeymanagerErrorConstant.MORE_THAN_ONE_KEY_FOUND.getErrorMessage());
+            // Updated below logic because in case KM is used to perform both encryption/decryption. 
+            // thumbprint for component certificate & Partner certificate will be same. Eg: RESIDENT (App Id)
+            int foundCounter = 0;
+            for(KeyAlias keyAlias : keyAliases) {
+                String dbAppIdRefId = keyAlias.getApplicationId() + KeymanagerConstant.HYPHEN + keyAlias.getReferenceId();
+                if (dbAppIdRefId.equals(appIdRefIdKey)) {
+                    foundDBAppIdRefId = dbAppIdRefId;
+                    foundCounter++;
+                }
+            }
+            if (foundCounter > 1) {
+                LOGGER.error(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
+                    "More than one key alias found for the provided thumbprint.");
+                throw new KeymanagerServiceException(KeymanagerErrorConstant.MORE_THAN_ONE_KEY_FOUND.getErrorCode(),
+                    KeymanagerErrorConstant.MORE_THAN_ONE_KEY_FOUND.getErrorMessage());
+            }
         }
         // Duplicate check required because before cacheing comparison of app id & reference id is required.
-        String idKey = keyAliases.get(0).getApplicationId() + KeymanagerConstant.HYPHEN + keyAliases.get(0).getReferenceId();
-        if (!idKey.equals(appIdRefIdKey)){
+        if (!foundDBAppIdRefId.equals(appIdRefIdKey)){
             LOGGER.error(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
                 "AppId & Reference Id not matching with the inputted thumbprint value(helper).");
             throw new KeymanagerServiceException(KeymanagerErrorConstant.APP_ID_REFERENCE_ID_NOT_MATCHING.getErrorCode(),
