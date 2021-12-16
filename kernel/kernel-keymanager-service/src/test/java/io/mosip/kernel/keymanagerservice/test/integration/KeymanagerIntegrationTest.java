@@ -1,11 +1,9 @@
 package io.mosip.kernel.keymanagerservice.test.integration;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.isA;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -46,7 +44,9 @@ import org.springframework.test.web.servlet.MvcResult;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
 
 import io.mosip.kernel.core.crypto.spi.CryptoCoreSpec;
 import io.mosip.kernel.core.http.RequestWrapper;
@@ -54,9 +54,6 @@ import io.mosip.kernel.core.http.ResponseWrapper;
 import io.mosip.kernel.core.keymanager.spi.KeyStore;
 import io.mosip.kernel.keymanager.hsm.util.CertificateUtility;
 import io.mosip.kernel.keymanagerservice.constant.KeymanagerConstant;
-import io.mosip.kernel.keymanagerservice.dto.PublicKeyResponse;
-import io.mosip.kernel.signature.dto.SignatureRequestDto;
-import io.mosip.kernel.signature.dto.SignatureResponseDto;
 import io.mosip.kernel.keymanagerservice.dto.SymmetricKeyRequestDto;
 import io.mosip.kernel.keymanagerservice.entity.KeyAlias;
 import io.mosip.kernel.keymanagerservice.entity.KeyPolicy;
@@ -65,6 +62,8 @@ import io.mosip.kernel.keymanagerservice.repository.KeyPolicyRepository;
 import io.mosip.kernel.keymanagerservice.repository.KeyStoreRepository;
 import io.mosip.kernel.keymanagerservice.test.KeymanagerTestBootApplication;
 import io.mosip.kernel.keymanagerservice.util.KeymanagerUtil;
+import io.mosip.kernel.signature.dto.SignatureRequestDto;
+import io.mosip.kernel.signature.dto.SignatureResponseDto;
 
 /**
  * @author Dharmesh Khandelwal
@@ -127,7 +126,7 @@ public class KeymanagerIntegrationTest {
 
 	@Before
 	public void init() {
-		mapper = new ObjectMapper();
+		mapper = JsonMapper.builder().addModule(new AfterburnerModule()).build();
 		keyalias = new ArrayList<>();
 		keyPolicy = Optional.empty();
 		dbKeyStore = Optional.empty();
@@ -164,24 +163,24 @@ public class KeymanagerIntegrationTest {
 	}
 
 	private void setupDBKeyStore() {
-		dbKeyStore = Optional.of(new io.mosip.kernel.keymanagerservice.entity.KeyStore("db-alias",
-				"test-public-key", "test-private#KEY_SPLITTER#-key", "alias"));
+		dbKeyStore = Optional.of(new io.mosip.kernel.keymanagerservice.entity.KeyStore("db-alias", "test-public-key",
+				"test-private#KEY_SPLITTER#-key", "alias"));
 	}
 
 	private void setupDBKeyStoreWithCertificiate() {
-		dbKeyStore = Optional.of(new io.mosip.kernel.keymanagerservice.entity.KeyStore("db-alias",
-				certificateData, "test-private#KEY_SPLITTER#-key", "alias"));
+		dbKeyStore = Optional.of(new io.mosip.kernel.keymanagerservice.entity.KeyStore("db-alias", certificateData,
+				"test-private#KEY_SPLITTER#-key", "alias"));
 	}
 
 	private void setupKey() throws NoSuchAlgorithmException {
 		BouncyCastleProvider provider = new BouncyCastleProvider();
-        Security.addProvider(provider);
+		Security.addProvider(provider);
 		KeyPairGenerator keyGen = KeyPairGenerator.getInstance(KeymanagerConstant.RSA);
 		keyGen.initialize(1024);
 		key = keyGen.generateKeyPair();
 		X509Certificate x509Certificate = CertificateUtility.generateX509Certificate(key.getPrivate(), key.getPublic(),
-					 "mosip", "mosip", "mosip",
-				"india", LocalDateTime.of(2010, 1, 1, 12, 00), LocalDateTime.of(2011, 1, 1, 12, 00), "SHA256withRSA", "BC");
+				"mosip", "mosip", "mosip", "india", LocalDateTime.of(2010, 1, 1, 12, 00),
+				LocalDateTime.of(2011, 1, 1, 12, 00), "SHA256withRSA", "BC");
 		X509Certificate[] chain = new X509Certificate[1];
 		chain[0] = x509Certificate;
 		privateKeyEntry = new PrivateKeyEntry(key.getPrivate(), chain);
@@ -210,7 +209,8 @@ public class KeymanagerIntegrationTest {
 		when(keyAliasRepository.findByApplicationIdAndReferenceId(Mockito.any(), Mockito.any())).thenReturn(keyalias);
 		when(cryptoCore.asymmetricDecrypt(Mockito.any(), Mockito.any())).thenReturn("".getBytes());
 		SymmetricKeyRequestDto symmetricKeyRequestDto = new SymmetricKeyRequestDto("applicationId",
-				LocalDateTime.parse("2010-05-01 12:00", DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")), null, "", true);
+				LocalDateTime.parse("2010-05-01 12:00", DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")), null, "",
+				true);
 		requestWrapper.setRequest(symmetricKeyRequestDto);
 		String content = mapper.writeValueAsString(requestWrapper);
 		MvcResult result = mockMvc.perform(post("/decrypt").contentType(MediaType.APPLICATION_JSON).content(content))
@@ -294,7 +294,8 @@ public class KeymanagerIntegrationTest {
 		when(keyStoreRepository.findByAlias(Mockito.any())).thenReturn(dbKeyStore);
 		when(keyAliasRepository.findByApplicationIdAndReferenceId(Mockito.any(), Mockito.any())).thenReturn(keyalias);
 		when(cryptoCore.asymmetricDecrypt(Mockito.any(), Mockito.any())).thenReturn("".getBytes());
-		doReturn(key.getPrivate().getEncoded()).when(keymanagerUtil).decryptKey(Mockito.any(), Mockito.any(), Mockito.any());
+		doReturn(key.getPrivate().getEncoded()).when(keymanagerUtil).decryptKey(Mockito.any(), Mockito.any(),
+				Mockito.any());
 		SymmetricKeyRequestDto symmetricKeyRequestDto = new SymmetricKeyRequestDto("applicationId",
 				LocalDateTime.parse("2010-05-01 12:00", DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")), "referenceId",
 				"", true);
@@ -316,7 +317,8 @@ public class KeymanagerIntegrationTest {
 		when(cryptoCore.sign(Mockito.any(), Mockito.any())).thenReturn("");
 		when(keyStore.getAsymmetricKey(Mockito.any())).thenReturn(privateKeyEntry);
 
-		doReturn(key.getPrivate().getEncoded()).when(keymanagerUtil).decryptKey(Mockito.any(), Mockito.any(), Mockito.any());
+		doReturn(key.getPrivate().getEncoded()).when(keymanagerUtil).decryptKey(Mockito.any(), Mockito.any(),
+				Mockito.any());
 		SignatureRequestDto encryptDataRequestDto = new SignatureRequestDto();
 		encryptDataRequestDto.setApplicationId("applicationId");
 		encryptDataRequestDto.setData("AMert334-edrtda");
@@ -348,7 +350,8 @@ public class KeymanagerIntegrationTest {
 		when(cryptoCore.sign(Mockito.any(), Mockito.any())).thenReturn("");
 		when(keyStore.getAsymmetricKey(Mockito.any())).thenReturn(privateKeyEntry);
 
-		doReturn(key.getPrivate().getEncoded()).when(keymanagerUtil).decryptKey(Mockito.any(), Mockito.any(), Mockito.any());
+		doReturn(key.getPrivate().getEncoded()).when(keymanagerUtil).decryptKey(Mockito.any(), Mockito.any(),
+				Mockito.any());
 		SignatureRequestDto encryptDataRequestDto = new SignatureRequestDto();
 		encryptDataRequestDto.setApplicationId("applicationId");
 		encryptDataRequestDto.setData("AMert334-edrtda");

@@ -31,7 +31,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
 
 import io.mosip.kernel.core.crypto.spi.CryptoCoreSpec;
 import io.mosip.kernel.core.http.RequestWrapper;
@@ -47,7 +49,6 @@ import io.mosip.kernel.cryptomanager.util.CryptomanagerUtils;
 import io.mosip.kernel.keygenerator.bouncycastle.KeyGenerator;
 import io.mosip.kernel.keymanager.hsm.util.CertificateUtility;
 import io.mosip.kernel.keymanagerservice.dto.KeyPairGenerateResponseDto;
-import io.mosip.kernel.keymanagerservice.dto.PublicKeyResponse;
 import io.mosip.kernel.keymanagerservice.dto.SymmetricKeyRequestDto;
 import io.mosip.kernel.keymanagerservice.dto.SymmetricKeyResponseDto;
 import io.mosip.kernel.keymanagerservice.service.KeymanagerService;
@@ -106,13 +107,13 @@ public class CryptographicServiceIntegrationTest {
 
 	@Before
 	public void setUp() {
-		objectMapper = new ObjectMapper();
+		objectMapper = JsonMapper.builder().addModule(new AfterburnerModule()).build();
 		objectMapper.registerModule(new JavaTimeModule());
 
 		keyPair = generator.getAsymmetricKey();
-		cert = CertificateUtility.generateX509Certificate(keyPair.getPrivate(), keyPair.getPublic(), 
-				"mosip", "mosip", "mosip",
-			"india", LocalDateTime.of(2010, 1, 1, 12, 00), LocalDateTime.of(2011, 1, 1, 12, 00), "SHA256withRSA", "BC");
+		cert = CertificateUtility.generateX509Certificate(keyPair.getPrivate(), keyPair.getPublic(), "mosip", "mosip",
+				"mosip", "india", LocalDateTime.of(2010, 1, 1, 12, 00), LocalDateTime.of(2011, 1, 1, 12, 00),
+				"SHA256withRSA", "BC");
 		certData = keymanagerUtil.getPEMFormatedData(cert);
 		requestWrapper = new RequestWrapper<>();
 		requestWrapper.setId(ID);
@@ -128,8 +129,8 @@ public class CryptographicServiceIntegrationTest {
 	@WithUserDetails("reg-processor")
 	@Test
 	public void testEncrypt() throws Exception {
-		KeyPairGenerateResponseDto responseDto = new KeyPairGenerateResponseDto(certData, null, LocalDateTime.now(), 
-					LocalDateTime.now(), LocalDateTime.now());
+		KeyPairGenerateResponseDto responseDto = new KeyPairGenerateResponseDto(certData, null, LocalDateTime.now(),
+				LocalDateTime.now(), LocalDateTime.now());
 		when(cryptoCore.symmetricEncrypt(Mockito.any(), Mockito.any(), Mockito.any()))
 				.thenReturn("MOCKENCRYPTEDDATA".getBytes());
 		when(cryptoCore.asymmetricEncrypt(Mockito.any(), Mockito.any()))
@@ -153,8 +154,9 @@ public class CryptographicServiceIntegrationTest {
 				.thenReturn(responseDto);
 		when(cryptomanagerUtil.getCertificate(Mockito.any())).thenReturn(cert);
 		when(cryptomanagerUtil.getCertificateThumbprint(Mockito.any())).thenReturn("CERTTHUMBPRINT".getBytes());
-		when(cryptomanagerUtil.concatCertThumbprint(Mockito.any(), Mockito.any())).thenReturn("CONCATEDENCRYPTEDSESSIONKEY".getBytes());
-		
+		when(cryptomanagerUtil.concatCertThumbprint(Mockito.any(), Mockito.any()))
+				.thenReturn("CONCATEDENCRYPTEDSESSIONKEY".getBytes());
+
 		String requestBody = objectMapper.writeValueAsString(requestWrapper);
 
 		MvcResult result = mockMvc
@@ -175,7 +177,7 @@ public class CryptographicServiceIntegrationTest {
 				CryptoUtil.encodeToURLSafeBase64(generator.getSymmetricKey().getEncoded()));
 
 		when(cryptoCore.symmetricDecrypt(Mockito.any(), Mockito.any(), Mockito.any())).thenReturn("dXJ2aWw".getBytes());
-       
+
 		requestDto = new CryptomanagerRequestDto();
 		requestWrapper.setRequest(requestDto);
 		String appid = "REGISTRATION";
@@ -186,12 +188,11 @@ public class CryptographicServiceIntegrationTest {
 		requestDto.setData(data);
 		requestDto.setReferenceId("ref123");
 		requestDto.setTimeStamp(timeStamp);
-		SymmetricKeyRequestDto symmetricKeyRequestDto = new SymmetricKeyRequestDto(
-				appid, timeStamp,
-				refid, data, true);
+		SymmetricKeyRequestDto symmetricKeyRequestDto = new SymmetricKeyRequestDto(appid, timeStamp, refid, data, true);
 		when(keyManagerService.decryptSymmetricKey(Mockito.any())).thenReturn(symmetricKeyResponseDto);
 		when(cryptomanagerUtil.parseEncryptKeyHeader(Mockito.any())).thenReturn("".getBytes());
-		when(cryptomanagerUtil.decodeBase64Data(data)).thenReturn("MOCKENCRYPTEDKEY#KEY_SPLITTER#MOCKENCRYPTEDDATA".getBytes());
+		when(cryptomanagerUtil.decodeBase64Data(data))
+				.thenReturn("MOCKENCRYPTEDKEY#KEY_SPLITTER#MOCKENCRYPTEDDATA".getBytes());
 		String requestBody = objectMapper.writeValueAsString(requestWrapper);
 		MvcResult result = mockMvc
 				.perform(post("/decrypt").contentType(MediaType.APPLICATION_JSON).content(requestBody))
@@ -211,12 +212,12 @@ public class CryptographicServiceIntegrationTest {
 		when(cryptoCore.symmetricEncrypt(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
 				.thenReturn("MOCKENCRYPTEDDATA".getBytes());
 		when(cryptomanagerUtil.hexDecode(Mockito.any())).thenReturn("MOCKHEXDATA".getBytes());
-		
+
 		requestWithPinDto = new CryptoWithPinRequestDto();
 		requestWithPinDto.setData("Test Pin Encryption.");
 		requestWithPinDto.setUserPin("AB1234");
 		requestWithPinWrapper.setRequest(requestWithPinDto);
-		
+
 		when(cryptomanagerUtil.isDataValid(Mockito.anyString())).thenReturn(true);
 		String requestBody = objectMapper.writeValueAsString(requestWithPinWrapper);
 
@@ -238,12 +239,13 @@ public class CryptographicServiceIntegrationTest {
 		when(cryptoCore.symmetricDecrypt(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
 				.thenReturn("MOCKENCRYPTEDDATA".getBytes());
 		when(cryptomanagerUtil.hexDecode(Mockito.any())).thenReturn("MOCKHEXDATA".getBytes());
-		
+
 		requestWithPinDto = new CryptoWithPinRequestDto();
-		requestWithPinDto.setData("GeB26aCD779DlCzRKkHlwAyctlI1Fh5SvLTctR_8uCZW-OOUombMq_Pt9eM4r40nWxoD_Mt-j3OVd9t9uXrcmECh5ec");
+		requestWithPinDto
+				.setData("GeB26aCD779DlCzRKkHlwAyctlI1Fh5SvLTctR_8uCZW-OOUombMq_Pt9eM4r40nWxoD_Mt-j3OVd9t9uXrcmECh5ec");
 		requestWithPinDto.setUserPin("AB1234");
 		requestWithPinWrapper.setRequest(requestWithPinDto);
-		
+
 		when(cryptomanagerUtil.isDataValid(Mockito.anyString())).thenReturn(true);
 		String requestBody = objectMapper.writeValueAsString(requestWithPinWrapper);
 
