@@ -379,7 +379,7 @@ public class SignatureServiceImpl implements SignatureService {
 				jws.setKey(publicKey);
 
 			return jws.verifySignature();
-		} catch (ArrayIndexOutOfBoundsException | JoseException e) {
+		} catch (JoseException e) {
 			LOGGER.error(SignatureConstant.SESSIONID, SignatureConstant.JWT_SIGN, SignatureConstant.BLANK,
 					"Provided Signed Data value is invalid.");
 			throw new SignatureFailureException(SignatureErrorCode.VERIFY_ERROR.getErrorCode(),
