@@ -89,8 +89,6 @@ public class KeymanagerDBHelper {
 
     @PostConstruct
     public void init() {
-        addCertificateThumbprints();
-        addKeyUniqueIdentifier();
         LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY, 
                     "Updating the thumbprint & key unique identifer completed.");
         keyPolicyCache = new Cache2kBuilder<String, Optional<KeyPolicy>>() {}
@@ -105,6 +103,8 @@ public class KeymanagerDBHelper {
                 return keyPolicyRepository.findByApplicationId(keyPolicyName);
         })
         .build();
+        addCertificateThumbprints();
+        addKeyUniqueIdentifier();
     }
     
     /**
@@ -312,32 +312,45 @@ public class KeymanagerDBHelper {
                                                     !keyAlias.getApplicationId().equals(KeymanagerConstant.KERNEL_APP_ID) &&
                                                     !keyAlias.getReferenceId().equals(KeymanagerConstant.KERNEL_IDENTIFY_CACHE)))
                                 .forEach(keyAlias -> {
-                                    String uniqueValue = keyAlias.getApplicationId() + KeymanagerConstant.UNDER_SCORE + 
-                                                             keyAlias.getReferenceId() + KeymanagerConstant.UNDER_SCORE +
-								                             keyAlias.getKeyGenerationTime().format(KeymanagerConstant.DATE_FORMATTER);
-		                            String uniqueIdentifier = keymanagerUtil.getUniqueIdentifier(uniqueValue);
-                                    if (keyAlias.getReferenceId().isEmpty() || 
-                                        (keyAlias.getApplicationId().equals(KeymanagerConstant.KERNEL_APP_ID) &&
-                                            keyAlias.getReferenceId().equals(signRefId))) {
-                                        X509Certificate x509Cert = (X509Certificate) keyStore.getCertificate(keyAlias.getAlias());
-                                        String certThumbprint = cryptomanagerUtil.getCertificateThumbprintInHex(x509Cert);
-                                        storeKeyInAlias(keyAlias.getApplicationId(), keyAlias.getKeyGenerationTime(), keyAlias.getReferenceId(), 
-                                            keyAlias.getAlias(), keyAlias.getKeyExpiryTime(), certThumbprint, uniqueIdentifier);
-                                    }
-                                    if (!keyAlias.getReferenceId().isEmpty()){
-                                        Optional<io.mosip.kernel.keymanagerservice.entity.KeyStore> keyFromDBStore = 
-                                                getKeyStoreFromDB(keyAlias.getAlias());
-                                        if (keyFromDBStore.isPresent()) {
-                                            String certificateData = keyFromDBStore.get().getCertificateData();
-                                            X509Certificate x509Cert = (X509Certificate) keymanagerUtil.convertToCertificate(certificateData);
+                                    try {
+                                        if (keyAlias.getReferenceId().isEmpty() || 
+                                            (keyAlias.getApplicationId().equals(KeymanagerConstant.KERNEL_APP_ID) &&
+                                                keyAlias.getReferenceId().equals(signRefId))) {
+                                            String uniqueValue = keyAlias.getApplicationId() + KeymanagerConstant.UNDER_SCORE + 
+                                                                keyAlias.getReferenceId() + KeymanagerConstant.UNDER_SCORE +
+                                                                keyAlias.getKeyGenerationTime().format(KeymanagerConstant.DATE_FORMATTER);
+                                            String uniqueIdentifier = keymanagerUtil.getUniqueIdentifier(uniqueValue);
+                                            X509Certificate x509Cert = (X509Certificate) keyStore.getCertificate(keyAlias.getAlias());
                                             String certThumbprint = cryptomanagerUtil.getCertificateThumbprintInHex(x509Cert);
-                                            storeKeyInAlias(keyAlias.getApplicationId(), keyAlias.getKeyGenerationTime(), 
-                                                keyAlias.getReferenceId(), keyAlias.getAlias(), keyAlias.getKeyExpiryTime(), 
-                                                certThumbprint, uniqueIdentifier);
+                                            storeKeyInAlias(keyAlias.getApplicationId(), keyAlias.getKeyGenerationTime(), keyAlias.getReferenceId(), 
+                                                keyAlias.getAlias(), keyAlias.getKeyExpiryTime(), certThumbprint, uniqueIdentifier);
                                         }
+                                        if (!keyAlias.getReferenceId().isEmpty()){
+                                            Optional<io.mosip.kernel.keymanagerservice.entity.KeyStore> keyFromDBStore = 
+                                                    getKeyStoreFromDB(keyAlias.getAlias());
+                                            if (keyFromDBStore.isPresent()) {
+                                                String certificateData = keyFromDBStore.get().getCertificateData();
+                                                X509Certificate x509Cert = (X509Certificate) keymanagerUtil.convertToCertificate(certificateData);
+                                                String certThumbprint = cryptomanagerUtil.getCertificateThumbprintInHex(x509Cert);
+                                                String uniqueValue = keyAlias.getApplicationId() + KeymanagerConstant.UNDER_SCORE + 
+                                                                keyAlias.getReferenceId() + KeymanagerConstant.UNDER_SCORE;
+                                                Optional<KeyPolicy> keyPolicy = keyPolicyCache.get(keyAlias.getApplicationId());
+                                                uniqueValue += keyPolicy.isPresent() ? 
+                                                               keyAlias.getKeyGenerationTime().format(KeymanagerConstant.DATE_FORMATTER) :
+                                                               certThumbprint;
+                                                String uniqueIdentifier = keymanagerUtil.getUniqueIdentifier(uniqueValue);
+                                                storeKeyInAlias(keyAlias.getApplicationId(), keyAlias.getKeyGenerationTime(), 
+                                                    keyAlias.getReferenceId(), keyAlias.getAlias(), keyAlias.getKeyExpiryTime(), 
+                                                    certThumbprint, uniqueIdentifier);
+                                            }
+                                        }
+                                        LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
+                                            "Thumbprint added for the key alias: " + keyAlias.getAlias());
+                                    } catch(Throwable t) {
+                                        // May be unique constraint exception from DB
+                                        LOGGER.debug(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
+                                            "Error Adding Thumbprint for the key alias: " + keyAlias.getAlias());
                                     }
-                                    LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
-                                        "Thumbprint added for the key alias: " + keyAlias.getAlias());
                                 });
     }
 
@@ -349,27 +362,40 @@ public class KeymanagerDBHelper {
                                                     !keyAlias.getApplicationId().equals(KeymanagerConstant.KERNEL_APP_ID) &&
                                                     !keyAlias.getReferenceId().equals(KeymanagerConstant.KERNEL_IDENTIFY_CACHE)))
                                 .forEach(keyAlias -> {
-                                    String uniqueValue = keyAlias.getApplicationId() + KeymanagerConstant.UNDER_SCORE + 
-                                                             keyAlias.getReferenceId() + KeymanagerConstant.UNDER_SCORE +
-								                             keyAlias.getKeyGenerationTime().format(KeymanagerConstant.DATE_FORMATTER);
-		                            String uniqueIdentifier = keymanagerUtil.getUniqueIdentifier(uniqueValue);
-                                    if (keyAlias.getReferenceId().isEmpty() || 
-                                        (keyAlias.getApplicationId().equals(KeymanagerConstant.KERNEL_APP_ID) &&
-                                            keyAlias.getReferenceId().equals(signRefId))) {
-                                        storeKeyInAlias(keyAlias.getApplicationId(), keyAlias.getKeyGenerationTime(), keyAlias.getReferenceId(), 
-                                            keyAlias.getAlias(), keyAlias.getKeyExpiryTime(), keyAlias.getCertThumbprint(), uniqueIdentifier);
-                                    }
-                                    if (!keyAlias.getReferenceId().isEmpty()){
-                                        Optional<io.mosip.kernel.keymanagerservice.entity.KeyStore> keyFromDBStore = 
-                                                getKeyStoreFromDB(keyAlias.getAlias());
-                                        if (keyFromDBStore.isPresent()) {
-                                            storeKeyInAlias(keyAlias.getApplicationId(), keyAlias.getKeyGenerationTime(), 
-                                                keyAlias.getReferenceId(), keyAlias.getAlias(), keyAlias.getKeyExpiryTime(), 
-                                                keyAlias.getCertThumbprint(), uniqueIdentifier);
+                                    try {
+                                        if (keyAlias.getReferenceId().isEmpty() || 
+                                            (keyAlias.getApplicationId().equals(KeymanagerConstant.KERNEL_APP_ID) &&
+                                                keyAlias.getReferenceId().equals(signRefId))) {
+                                            String uniqueValue = keyAlias.getApplicationId() + KeymanagerConstant.UNDER_SCORE + 
+                                                    keyAlias.getReferenceId() + KeymanagerConstant.UNDER_SCORE +
+                                                    keyAlias.getKeyGenerationTime().format(KeymanagerConstant.DATE_FORMATTER);
+                                            String uniqueIdentifier = keymanagerUtil.getUniqueIdentifier(uniqueValue);
+                                            storeKeyInAlias(keyAlias.getApplicationId(), keyAlias.getKeyGenerationTime(), keyAlias.getReferenceId(), 
+                                                keyAlias.getAlias(), keyAlias.getKeyExpiryTime(), keyAlias.getCertThumbprint(), uniqueIdentifier);
                                         }
+                                        if (!keyAlias.getReferenceId().isEmpty()){
+                                            Optional<io.mosip.kernel.keymanagerservice.entity.KeyStore> keyFromDBStore = 
+                                                    getKeyStoreFromDB(keyAlias.getAlias());
+                                            if (keyFromDBStore.isPresent()) {
+                                                String uniqueValue = keyAlias.getApplicationId() + KeymanagerConstant.UNDER_SCORE + 
+                                                                    keyAlias.getReferenceId() + KeymanagerConstant.UNDER_SCORE;
+                                                Optional<KeyPolicy> keyPolicy = keyPolicyCache.get(keyAlias.getApplicationId());
+                                                uniqueValue += keyPolicy.isPresent() ? 
+                                                                keyAlias.getKeyGenerationTime().format(KeymanagerConstant.DATE_FORMATTER) :
+                                                                keyAlias.getCertThumbprint();
+                                                    String uniqueIdentifier = keymanagerUtil.getUniqueIdentifier(uniqueValue);
+                                                storeKeyInAlias(keyAlias.getApplicationId(), keyAlias.getKeyGenerationTime(), 
+                                                    keyAlias.getReferenceId(), keyAlias.getAlias(), keyAlias.getKeyExpiryTime(), 
+                                                    keyAlias.getCertThumbprint(), uniqueIdentifier);
+                                            }
+                                        }
+                                        LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
+                                            "Unique Identifier added for the key alias: " + keyAlias.getAlias());
+                                    } catch(Throwable t) {
+                                        // May be unique constraint exception from DB
+                                        LOGGER.debug(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
+                                            "Error Adding Unique Identifier for the key alias: " + keyAlias.getAlias());
                                     }
-                                    LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
-                                        "Unique Identifier added for the key alias: " + keyAlias.getAlias());
                                 });
     }
 
