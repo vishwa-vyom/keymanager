@@ -193,6 +193,7 @@ public class CryptographicServiceIntegrationTest {
 		when(cryptomanagerUtil.parseEncryptKeyHeader(Mockito.any())).thenReturn("".getBytes());
 		when(cryptomanagerUtil.decodeBase64Data(data))
 				.thenReturn("MOCKENCRYPTEDKEY#KEY_SPLITTER#MOCKENCRYPTEDDATA".getBytes());
+		when(cryptomanagerUtil.hasKeyAccess(Mockito.anyString())).thenReturn(true);
 		String requestBody = objectMapper.writeValueAsString(requestWrapper);
 		MvcResult result = mockMvc
 				.perform(post("/decrypt").contentType(MediaType.APPLICATION_JSON).content(requestBody))

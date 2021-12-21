@@ -171,6 +171,13 @@ public class CryptomanagerServiceImpl implements CryptomanagerService {
 		LOGGER.info(CryptomanagerConstant.SESSIONID, CryptomanagerConstant.DECRYPT, CryptomanagerConstant.DECRYPT, 
 						"Request for data decryption.");
 
+		boolean hasAcccess = cryptomanagerUtil.hasKeyAccess(cryptoRequestDto.getApplicationId());
+		if (!hasAcccess) {
+			LOGGER.error(CryptomanagerConstant.SESSIONID, CryptomanagerConstant.DECRYPT, CryptomanagerConstant.DECRYPT,
+								"Data Decryption is not allowed for the authenticated user for the provided application id.");
+			throw new CryptoManagerSerivceException(CryptomanagerErrorCode.DECRYPT_NOT_ALLOWED_ERROR.getErrorCode(),
+						CryptomanagerErrorCode.DECRYPT_NOT_ALLOWED_ERROR.getErrorMessage());
+		}
 		int keyDemiliterIndex = 0;
 		byte[] encryptedHybridData = cryptomanagerUtil.decodeBase64Data(cryptoRequestDto.getData());
 		keyDemiliterIndex = CryptoUtil.getSplitterIndex(encryptedHybridData, keyDemiliterIndex, keySplitter);

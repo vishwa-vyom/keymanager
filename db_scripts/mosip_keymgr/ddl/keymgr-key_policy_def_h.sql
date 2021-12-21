@@ -18,6 +18,8 @@ CREATE TABLE keymgr.key_policy_def_h(
 	eff_dtimes timestamp NOT NULL,
 	key_validity_duration smallint,
 	is_active boolean NOT NULL,
+	pre_expire_days smallint,
+	access_allowed character varying(1024), 
 	cr_by character varying(256) NOT NULL,
 	cr_dtimes timestamp NOT NULL,
 	upd_by character varying(256),

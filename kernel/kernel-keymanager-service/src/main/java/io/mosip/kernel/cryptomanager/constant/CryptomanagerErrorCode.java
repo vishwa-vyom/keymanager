@@ -59,6 +59,8 @@ public enum CryptomanagerErrorCode {
 
 	ENCRYPT_NOT_ALLOWED_ERROR("KER-CRY-011", "Not Allowed to preform encryption with Master Key. Use Base/Encrypt key to encrypt data."),
 
+	DECRYPT_NOT_ALLOWED_ERROR("KER-CRY-012", "Not Allowed to preform decryption for the provided application id and with authentication token"),
+
 	INTERNAL_SERVER_ERROR("KER-CRY-500", "Internal server error");
 
 

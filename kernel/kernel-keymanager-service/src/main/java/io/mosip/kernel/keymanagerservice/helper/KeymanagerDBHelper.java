@@ -10,6 +10,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import javax.annotation.PostConstruct;
+
+import org.cache2k.Cache;
+import org.cache2k.Cache2kBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -80,6 +84,28 @@ public class KeymanagerDBHelper {
 	 */
 	@Autowired
 	CryptomanagerUtils cryptomanagerUtil;
+
+    private Cache<String, Optional<KeyPolicy>> keyPolicyCache = null;
+
+    @PostConstruct
+    public void init() {
+        addCertificateThumbprints();
+        addKeyUniqueIdentifier();
+        LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY, 
+                    "Updating the thumbprint & key unique identifer completed.");
+        keyPolicyCache = new Cache2kBuilder<String, Optional<KeyPolicy>>() {}
+        // added hashcode because test case execution failing with IllegalStateException: Cache already created
+        .name("keyPolicyCache-" + this.hashCode()) 
+        .eternal(true)
+        .entryCapacity(20)
+        .loaderThreadCount(1)
+        .loader((keyPolicyName) -> {
+                LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY, 
+                            "Fetching Key Policy for keyPolicyName(Cache): " + keyPolicyName);
+                return keyPolicyRepository.findByApplicationId(keyPolicyName);
+        })
+        .build();
+    }
     
     /**
 	 * Function to store key in keyalias table
@@ -91,7 +117,7 @@ public class KeymanagerDBHelper {
 	 * @param expiryDateTime expiryDateTime
 	 */
 	public void storeKeyInAlias(String applicationId, LocalDateTime timeStamp, String referenceId, String alias,
-                            LocalDateTime expiryDateTime, String certThumbprint) {
+                            LocalDateTime expiryDateTime, String certThumbprint, String uniqueIdentifier) {
         LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY, KeymanagerConstant.STOREKEYALIAS);
         KeyAlias keyAlias = new KeyAlias();
         keyAlias.setAlias(alias);
@@ -100,6 +126,7 @@ public class KeymanagerDBHelper {
         keyAlias.setKeyGenerationTime(timeStamp);
         keyAlias.setKeyExpiryTime(expiryDateTime);
         keyAlias.setCertThumbprint(certThumbprint);
+        keyAlias.setUniqueIdentifier(uniqueIdentifier);
         keyAliasRepository.saveAndFlush(keymanagerUtil.setMetaData(keyAlias));
     }
 
@@ -138,8 +165,10 @@ public class KeymanagerDBHelper {
                 .stream()
                 .sorted((alias1, alias2) -> alias1.getKeyGenerationTime().compareTo(alias2.getKeyGenerationTime()))
                 .collect(Collectors.toList());
+        int preExpireDays = getPreExpireDays(applicationId, referenceId);
+        LOGGER.info(KeymanagerConstant.SESSIONID, applicationId, referenceId, "PreExpireDays found as key policy:" + preExpireDays);
         List<KeyAlias> currentKeyAliases = keyAliases.stream()
-                .filter(keyAlias -> keymanagerUtil.isValidTimestamp(timeStamp, keyAlias)).collect(Collectors.toList());
+                .filter(keyAlias -> keymanagerUtil.isValidTimestamp(timeStamp, keyAlias, preExpireDays)).collect(Collectors.toList());
         LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.KEYALIAS, Arrays.toString(keyAliases.toArray()),
                 KeymanagerConstant.KEYALIAS);
         LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.CURRENTKEYALIAS,
@@ -162,7 +191,7 @@ public class KeymanagerDBHelper {
     public LocalDateTime getExpiryPolicy(String applicationId, LocalDateTime timeStamp, List<KeyAlias> keyAlias) {
         LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.APPLICATIONID, applicationId,
                 KeymanagerConstant.GETEXPIRYPOLICY);
-        Optional<KeyPolicy> keyPolicy = keyPolicyRepository.findByApplicationId(applicationId);
+        Optional<KeyPolicy> keyPolicy = keyPolicyCache.get(applicationId);
         if (!keyPolicy.isPresent()) {
             LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.KEYPOLICY, keyPolicy.toString(),
                     "Key Policy not found for this application Id. Throwing exception");
@@ -170,7 +199,8 @@ public class KeymanagerDBHelper {
                     KeymanagerErrorConstant.APPLICATIONID_NOT_VALID.getErrorMessage());
         }
         LocalDateTime policyExpiryTime = timeStamp.plusDays(keyPolicy.get().getValidityInDays());
-        if (!keyAlias.isEmpty()) {
+        // Commented below logic, as its not required after implementing key per expire days logic.
+        /* if (!keyAlias.isEmpty()) {
             LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.KEYALIAS, String.valueOf(keyAlias.size()),
                     "Getting expiry policy. KeyAlias exists");
             for (KeyAlias alias : keyAlias) {
@@ -182,7 +212,7 @@ public class KeymanagerDBHelper {
                     break;
                 }
             }
-        }
+        } */
         return policyExpiryTime;
     }
 
@@ -209,14 +239,18 @@ public class KeymanagerDBHelper {
     * @return KeyPolicy {@KeyPolicy}
     */
     public Optional<KeyPolicy> getKeyPolicy(String applicationId){
-        Optional<KeyPolicy> keyPolicy = keyPolicyRepository.findByApplicationIdAndIsActive(applicationId, true);
-		if (!keyPolicy.isPresent()) {
+        Optional<KeyPolicy> keyPolicy = keyPolicyCache.get(applicationId);
+		if (!keyPolicy.isPresent() || !keyPolicy.get().isActive()) {
 			LOGGER.error(KeymanagerConstant.SESSIONID, KeymanagerConstant.KEYPOLICY, keyPolicy.toString(),
-					"Key Policy not found for this application Id.");
+					"Key Policy not found for this application Id. Key/CSR generation not allowed.");
 			throw new InvalidApplicationIdException(KeymanagerErrorConstant.APPLICATIONID_NOT_VALID.getErrorCode(),
 					KeymanagerErrorConstant.APPLICATIONID_NOT_VALID.getErrorMessage());
         }
         return keyPolicy;
+    }
+
+    public Optional<KeyPolicy> getKeyPolicyFromCache(String applicationId) {
+        return keyPolicyCache.get(applicationId);
     }
 
     public KeyStore getKeyAlias(String certThumbprint, String appIdRefIdKey) {
@@ -261,24 +295,34 @@ public class KeymanagerDBHelper {
             return new KeyStore(keyAliases.get(0).getAlias(), null, null, null);
             
         }
+        if (Objects.isNull(keyAliases.get(0).getUniqueIdentifier())) {
+            LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
+                            "Key Unique identifier not found for the provided key, may be unique identifier is not updated. " +
+                            "Adding Unique Identifier(s) now.");
+            addKeyUniqueIdentifier();
+        }
         return keyFromDBStore.get();
     }
 
     // this will get executed only one time to add the certificate thumbprints.
     private synchronized void addCertificateThumbprints() {
-        List<KeyAlias> allKeyAliases = keyAliasRepository.findAll();
+        List<KeyAlias> allKeyAliases = keyAliasRepository.findByCertThumbprintIsNull();
         allKeyAliases.stream().filter(keyAlias -> ((Objects.isNull(keyAlias.getCertThumbprint()) || 
                                                     keyAlias.getCertThumbprint().equals(KeymanagerConstant.EMPTY)) && 
                                                     !keyAlias.getApplicationId().equals(KeymanagerConstant.KERNEL_APP_ID) &&
                                                     !keyAlias.getReferenceId().equals(KeymanagerConstant.KERNEL_IDENTIFY_CACHE)))
                                 .forEach(keyAlias -> {
+                                    String uniqueValue = keyAlias.getApplicationId() + KeymanagerConstant.UNDER_SCORE + 
+                                                             keyAlias.getReferenceId() + KeymanagerConstant.UNDER_SCORE +
+								                             keyAlias.getKeyGenerationTime().format(KeymanagerConstant.DATE_FORMATTER);
+		                            String uniqueIdentifier = keymanagerUtil.getUniqueIdentifier(uniqueValue);
                                     if (keyAlias.getReferenceId().isEmpty() || 
                                         (keyAlias.getApplicationId().equals(KeymanagerConstant.KERNEL_APP_ID) &&
                                             keyAlias.getReferenceId().equals(signRefId))) {
                                         X509Certificate x509Cert = (X509Certificate) keyStore.getCertificate(keyAlias.getAlias());
                                         String certThumbprint = cryptomanagerUtil.getCertificateThumbprintInHex(x509Cert);
                                         storeKeyInAlias(keyAlias.getApplicationId(), keyAlias.getKeyGenerationTime(), keyAlias.getReferenceId(), 
-                                            keyAlias.getAlias(), keyAlias.getKeyExpiryTime(), certThumbprint);
+                                            keyAlias.getAlias(), keyAlias.getKeyExpiryTime(), certThumbprint, uniqueIdentifier);
                                     }
                                     if (!keyAlias.getReferenceId().isEmpty()){
                                         Optional<io.mosip.kernel.keymanagerservice.entity.KeyStore> keyFromDBStore = 
@@ -288,11 +332,61 @@ public class KeymanagerDBHelper {
                                             X509Certificate x509Cert = (X509Certificate) keymanagerUtil.convertToCertificate(certificateData);
                                             String certThumbprint = cryptomanagerUtil.getCertificateThumbprintInHex(x509Cert);
                                             storeKeyInAlias(keyAlias.getApplicationId(), keyAlias.getKeyGenerationTime(), 
-                                                keyAlias.getReferenceId(), keyAlias.getAlias(), keyAlias.getKeyExpiryTime(), certThumbprint);
+                                                keyAlias.getReferenceId(), keyAlias.getAlias(), keyAlias.getKeyExpiryTime(), 
+                                                certThumbprint, uniqueIdentifier);
                                         }
                                     }
                                     LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
                                         "Thumbprint added for the key alias: " + keyAlias.getAlias());
                                 });
+    }
+
+    // this will get executed only one time to add the key unique identifier.
+    private synchronized void addKeyUniqueIdentifier() {
+        List<KeyAlias> allKeyAliases = keyAliasRepository.findByUniqueIdentifierIsNull();
+        allKeyAliases.stream().filter(keyAlias -> ((Objects.isNull(keyAlias.getUniqueIdentifier()) || 
+                                                    keyAlias.getUniqueIdentifier().equals(KeymanagerConstant.EMPTY)) && 
+                                                    !keyAlias.getApplicationId().equals(KeymanagerConstant.KERNEL_APP_ID) &&
+                                                    !keyAlias.getReferenceId().equals(KeymanagerConstant.KERNEL_IDENTIFY_CACHE)))
+                                .forEach(keyAlias -> {
+                                    String uniqueValue = keyAlias.getApplicationId() + KeymanagerConstant.UNDER_SCORE + 
+                                                             keyAlias.getReferenceId() + KeymanagerConstant.UNDER_SCORE +
+								                             keyAlias.getKeyGenerationTime().format(KeymanagerConstant.DATE_FORMATTER);
+		                            String uniqueIdentifier = keymanagerUtil.getUniqueIdentifier(uniqueValue);
+                                    if (keyAlias.getReferenceId().isEmpty() || 
+                                        (keyAlias.getApplicationId().equals(KeymanagerConstant.KERNEL_APP_ID) &&
+                                            keyAlias.getReferenceId().equals(signRefId))) {
+                                        storeKeyInAlias(keyAlias.getApplicationId(), keyAlias.getKeyGenerationTime(), keyAlias.getReferenceId(), 
+                                            keyAlias.getAlias(), keyAlias.getKeyExpiryTime(), keyAlias.getCertThumbprint(), uniqueIdentifier);
+                                    }
+                                    if (!keyAlias.getReferenceId().isEmpty()){
+                                        Optional<io.mosip.kernel.keymanagerservice.entity.KeyStore> keyFromDBStore = 
+                                                getKeyStoreFromDB(keyAlias.getAlias());
+                                        if (keyFromDBStore.isPresent()) {
+                                            storeKeyInAlias(keyAlias.getApplicationId(), keyAlias.getKeyGenerationTime(), 
+                                                keyAlias.getReferenceId(), keyAlias.getAlias(), keyAlias.getKeyExpiryTime(), 
+                                                keyAlias.getCertThumbprint(), uniqueIdentifier);
+                                        }
+                                    }
+                                    LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
+                                        "Unique Identifier added for the key alias: " + keyAlias.getAlias());
+                                });
+    }
+
+    private int getPreExpireDays(String applicationId, String referenceId){
+        Optional<KeyPolicy> keyPolicy = keyPolicyCache.get(applicationId);
+        if (!keyPolicy.isPresent()) {
+            // key policy details not available, so not considering any pre expire days 
+            return 0;
+        }
+        
+        if (referenceId.isEmpty() || (applicationId.equals(KeymanagerConstant.KERNEL_APP_ID) &&
+                        (referenceId.equals(signRefId) || referenceId.equals(KeymanagerConstant.KERNEL_IDENTIFY_CACHE)))) {
+            // key policy details for component Master Key.
+            return keyPolicy.get().getPreExpireDays();
+        }
+        // finally, considering key policy for encryption keys.
+        Optional<KeyPolicy> encKeyPolicy = keyPolicyCache.get(KeymanagerConstant.BASE_KEY_POLICY_CONST);
+        return encKeyPolicy.get().getPreExpireDays();
     }
 }

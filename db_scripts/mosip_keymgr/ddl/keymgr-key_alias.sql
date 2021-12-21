@@ -29,8 +29,9 @@ CREATE TABLE keymgr.key_alias(
 	is_deleted boolean DEFAULT FALSE,
 	del_dtimes timestamp,
 	cert_thumbprint character varying(100),
-	CONSTRAINT pk_keymals_id PRIMARY KEY (id)
-
+	uni_ident character varying(50),
+	CONSTRAINT pk_keymals_id PRIMARY KEY (id),
+	CONSTRAINT uni_ident_const UNIQUE (uni_ident)
 );
 -- ddl-end --
 COMMENT ON TABLE keymgr.key_alias IS 'Key Alias: To maintain a system generated key as alias for the encryption key that will be stored in key-store devices like HSM.';

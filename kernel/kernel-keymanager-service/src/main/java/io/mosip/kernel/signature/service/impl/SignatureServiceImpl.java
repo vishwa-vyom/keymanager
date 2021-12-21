@@ -40,6 +40,7 @@ import io.mosip.kernel.core.util.DateUtils;
 import io.mosip.kernel.core.util.JsonUtils;
 import io.mosip.kernel.core.util.exception.JsonMappingException;
 import io.mosip.kernel.core.util.exception.JsonParseException;
+import io.mosip.kernel.cryptomanager.util.CryptomanagerUtils;
 import io.mosip.kernel.keymanagerservice.constant.KeymanagerConstant;
 import io.mosip.kernel.keymanagerservice.constant.KeymanagerErrorConstant;
 import io.mosip.kernel.keymanagerservice.dto.KeyPairGenerateResponseDto;
@@ -116,6 +117,8 @@ public class SignatureServiceImpl implements SignatureService {
 	@Autowired
 	PartnerCertificateManagerService partnerCertManagerService;
 
+	@Autowired
+	CryptomanagerUtils cryptomanagerUtil;
 
 	@Override
 	public SignatureResponse sign(SignRequestDto signRequestDto) {
@@ -209,6 +212,14 @@ public class SignatureServiceImpl implements SignatureService {
 	public JWTSignatureResponseDto jwtSign(JWTSignatureRequestDto jwtSignRequestDto) {
 		LOGGER.info(SignatureConstant.SESSIONID, SignatureConstant.JWT_SIGN, SignatureConstant.BLANK,
 				"JWT Signature Request.");
+
+		boolean hasAcccess = cryptomanagerUtil.hasKeyAccess(jwtSignRequestDto.getApplicationId());
+		if (!hasAcccess) {
+			LOGGER.error(SignatureConstant.SESSIONID, SignatureConstant.JWT_SIGN, SignatureConstant.BLANK,
+								"Signing Data is not allowed for the authenticated user for the provided application id.");
+			throw new RequestException(SignatureErrorCode.SIGN_NOT_ALLOWED.getErrorCode(),
+				SignatureErrorCode.SIGN_NOT_ALLOWED.getErrorMessage());
+		}
 
 		String reqDataToSign = jwtSignRequestDto.getDataToSign();
 		if (!SignatureUtil.isDataValid(reqDataToSign)) {

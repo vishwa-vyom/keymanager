@@ -1,5 +1,7 @@
 package io.mosip.kernel.keymanagerservice.constant;
 
+import java.time.format.DateTimeFormatter;
+
 /**
  * Constants for Keymanager
  * 
@@ -188,4 +190,10 @@ public class KeymanagerConstant {
 	public static final String PARTNER_APP_ID = "PARTNER";
 
 	public static final String HYPHEN = "-";
+
+	public static final String DATE_FORMAT = "MM-dd-yyyy";
+
+	public static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern(DATE_FORMAT);
+
+	public static final String UNDER_SCORE = "_";
 }
