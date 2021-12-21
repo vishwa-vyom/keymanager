@@ -23,6 +23,8 @@ public enum SignatureErrorCode {
 
 	CERT_NOT_VALID("KER-JWS-107", "Signature verification certificate not valid."),
 
+	SIGN_NOT_ALLOWED("KER-JWS-108", "Signing data not allowed for the authenticated token."),
+
 	INTERNAL_SERVER_ERROR("KER-CSS-102", "Internal server error");
 
 	private final String errorCode;

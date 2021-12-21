@@ -142,24 +142,24 @@ public class KeymanagerIntegrationTest {
 	private void setupMultipleKeyAlias() {
 		keyalias = new ArrayList<>();
 		keyalias.add(new KeyAlias("alias-one", "applicationId", "referenceId", LocalDateTime.of(2020, 1, 1, 12, 00),
-				LocalDateTime.of(2023, 1, 1, 12, 00), "status", null));
+				LocalDateTime.of(2023, 1, 1, 12, 00), "status", null, null));
 		keyalias.add(new KeyAlias("alias-two", "applicationId", "referenceId", LocalDateTime.of(2020, 1, 1, 12, 00),
-				LocalDateTime.of(2023, 1, 1, 12, 00), "status", null));
+				LocalDateTime.of(2023, 1, 1, 12, 00), "status", null, null));
 		keyalias.add(new KeyAlias("alias-root", "ROOT", "", LocalDateTime.of(2020, 1, 1, 12, 00),
-				LocalDateTime.of(2025, 1, 1, 12, 00), "status", null));
+				LocalDateTime.of(2025, 1, 1, 12, 00), "status", null, null));
 
 	}
 
 	private void setupSingleKeyAlias() {
 		keyalias = new ArrayList<>();
 		keyalias.add(new KeyAlias("alias", "applicationId", "referenceId", LocalDateTime.of(2010, 1, 1, 12, 00),
-				LocalDateTime.of(2011, 1, 1, 12, 00), "status", null));
+				LocalDateTime.of(2011, 1, 1, 12, 00), "status", null, null));
 		keyalias.add(new KeyAlias("alias-root", "ROOT", "", LocalDateTime.of(2020, 1, 1, 12, 00),
-				LocalDateTime.of(2025, 1, 1, 12, 00), "status", null));
+				LocalDateTime.of(2025, 1, 1, 12, 00), "status", null, null));
 	}
 
 	private void setupExpiryPolicy() {
-		keyPolicy = Optional.of(new KeyPolicy("applicationId", 365, true));
+		keyPolicy = Optional.of(new KeyPolicy("applicationId", 365, true, 30, ""));
 	}
 
 	private void setupDBKeyStore() {
