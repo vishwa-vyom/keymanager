@@ -34,13 +34,12 @@ public class TokenIdGeneratorIntegrationTest {
 	public void generateTokenIDTest() throws Exception {
 		TokenIDResponseDto response = new TokenIDResponseDto();
 		response.setTokenID("123456");
-		mockMvc.perform(get("/1234/1234").contentType(MediaType.APPLICATION_JSON)).andExpect(status().isOk());
-
+		mockMvc.perform(get("/tokenid/1234/1234").contentType(MediaType.APPLICATION_JSON)).andExpect(status().isOk());
 	}
 
 	@Test
 	@WithUserDetails("id-auth")
 	public void generateTokenIdExceptionTest() throws Exception {
-		mockMvc.perform(get("/    /  ").contentType(MediaType.APPLICATION_JSON)).andExpect(status().isOk());
+		mockMvc.perform(get("/tokenid/    /  ").contentType(MediaType.APPLICATION_JSON)).andExpect(status().isOk());
 	}
 }

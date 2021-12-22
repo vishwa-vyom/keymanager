@@ -65,9 +65,14 @@ public class KeyAlias extends BaseEntity {
 	private String status;
 
 	/**
-	 * The field status
+	 * The Certificate Thumbprint
 	 */
 	@Column(name = "cert_thumbprint", length = 128)
 	private String certThumbprint;
 
-}
+	/**
+	 * The Key Unique Identifier
+	 */
+	@Column(name = "uni_ident", length = 32)
+	private String uniqueIdentifier;
+}	

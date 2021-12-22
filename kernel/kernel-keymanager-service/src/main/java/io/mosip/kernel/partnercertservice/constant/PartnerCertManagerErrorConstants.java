@@ -38,6 +38,8 @@ public enum PartnerCertManagerErrorConstants {
 	CERT_SIGNATURE_ALGO_NOT_ALLOWED("KER-PCM-014", "Partner Certificate Signature algorithm not supported."),
 
 	SELF_SIGNED_CERT_NOT_ALLOWED("KER-PCM-015", "Self Signed Certificate not allowed as partner."),
+
+	SIGN_CERT_NOT_ALLOWED("KER-PCM-016", "Sign Certificate not allowed for the authenticated token."),
     ;
 
 	/**

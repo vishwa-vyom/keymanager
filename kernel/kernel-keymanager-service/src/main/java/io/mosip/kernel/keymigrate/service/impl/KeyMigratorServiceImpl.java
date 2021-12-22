@@ -156,7 +156,12 @@ public class KeyMigratorServiceImpl implements KeyMigratorService {
         X509Certificate reqX509Cert = (X509Certificate) keymanagerUtil.convertToCertificate(certificateData);
         String certThumbprint = cryptomanagerUtil.getCertificateThumbprintInHex(reqX509Cert);
         dbHelper.storeKeyInDBStore(baseKeyAlias, masterKeyAlias, certificateData, encryptedPrivateKey);
-		dbHelper.storeKeyInAlias(appId, notBefore, refId, baseKeyAlias, notAfter, certThumbprint);
+        String uniqueValue = appId + KeymanagerConstant.UNDER_SCORE + refId + KeymanagerConstant.UNDER_SCORE +
+                                notBefore.format(KeymanagerConstant.DATE_FORMATTER);
+		LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
+								"Unique Value formatter: " + uniqueValue);
+		String uniqueIdentifier = keymanagerUtil.getUniqueIdentifier(uniqueValue);
+		dbHelper.storeKeyInAlias(appId, notBefore, refId, baseKeyAlias, notAfter, certThumbprint, uniqueIdentifier);
 
         LOGGER.info(KeyMigratorConstants.SESSIONID, KeyMigratorConstants.BASE_KEY, 
                             KeyMigratorConstants.EMPTY, "Migration Completed for App Id:" + appId + ", Ref Id: " + refId 
@@ -238,7 +243,7 @@ public class KeyMigratorServiceImpl implements KeyMigratorService {
                     KeyMigratorConstants.EMPTY, "Found Alias to delete key. Alias: " + alias);
             keyStore.deleteKey(alias);
 		    dbHelper.storeKeyInAlias(KeyMigratorConstants.ZK_TEMP_KEY_APP_ID, localDateTimeStamp, KeyMigratorConstants.ZK_TEMP_KEY_REF_ID, 
-                    alias, localDateTimeStamp, null);
+                    alias, localDateTimeStamp, null, null);
         } else if (currentKeyAlias.size() == 1) {
             LOGGER.info(KeyMigratorConstants.SESSIONID, KeyMigratorConstants.ZK_KEYS,
                     String.valueOf(currentKeyAlias.size()), "currentKeyAlias size is one, returning the certificate.");
@@ -261,8 +266,16 @@ public class KeyMigratorServiceImpl implements KeyMigratorService {
 		keyStore.generateAndStoreAsymmetricKey(alias, null, certParams);
         X509Certificate x509Cert = (X509Certificate) keyStore.getCertificate(alias);
 		String certThumbprint = cryptomanagerUtil.getCertificateThumbprintInHex(x509Cert);
+        // Using certThumbprint not generation time because in case more than one migration master key may be 
+        // required to generate on same day. 
+        String uniqueValue = KeyMigratorConstants.ZK_TEMP_KEY_APP_ID + KeymanagerConstant.UNDER_SCORE + 
+                             KeyMigratorConstants.ZK_TEMP_KEY_REF_ID + KeymanagerConstant.UNDER_SCORE +
+                             certThumbprint;
+		LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY,
+								"Unique Value formatter: " + uniqueValue);
+		String uniqueIdentifier = keymanagerUtil.getUniqueIdentifier(uniqueValue);
 		dbHelper.storeKeyInAlias(KeyMigratorConstants.ZK_TEMP_KEY_APP_ID, localDateTimeStamp, KeyMigratorConstants.ZK_TEMP_KEY_REF_ID, 
-                                alias, expiryDateTime, certThumbprint);
+                                alias, expiryDateTime, certThumbprint, uniqueIdentifier);
 
         String certificateData = keymanagerUtil.getPEMFormatedData(keyStore.getCertificate(alias));
         responseDto.setCertificate(certificateData);
@@ -317,7 +330,7 @@ public class KeyMigratorServiceImpl implements KeyMigratorService {
             LOGGER.info(KeyMigratorConstants.SESSIONID, KeyMigratorConstants.ZK_KEYS, 
                             KeyMigratorConstants.EMPTY, "Key Purged from Store. Key Alias: " + tempKeyAlias);
             dbHelper.storeKeyInAlias(KeyMigratorConstants.ZK_TEMP_KEY_APP_ID, localDateTimeStamp, KeyMigratorConstants.ZK_TEMP_KEY_REF_ID, 
-                    tempKeyAlias, localDateTimeStamp, null);
+                    tempKeyAlias, localDateTimeStamp, null, null);
         }
         ZKKeyMigrateResponseDto responseDto = new ZKKeyMigrateResponseDto();
         responseDto.setZkEncryptedDataList(keyResponseList);
