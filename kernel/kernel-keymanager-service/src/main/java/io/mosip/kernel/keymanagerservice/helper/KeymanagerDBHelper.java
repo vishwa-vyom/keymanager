@@ -49,6 +49,10 @@ public class KeymanagerDBHelper {
     @Value("${mosip.sign-certificate-refid:SIGN}")
 	private String signRefId;
 
+    // added because flag because getting exception in datasync.
+    @Value("${mosip.kernel.keymanager.unique.identifier.autoupdate:true}")
+	private boolean autoUpdate;
+
     /**
 	 * {@link KeyAliasRepository} instance
 	 */
@@ -89,22 +93,24 @@ public class KeymanagerDBHelper {
 
     @PostConstruct
     public void init() {
-        LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY, 
-                    "Updating the thumbprint & key unique identifer completed.");
-        keyPolicyCache = new Cache2kBuilder<String, Optional<KeyPolicy>>() {}
-        // added hashcode because test case execution failing with IllegalStateException: Cache already created
-        .name("keyPolicyCache-" + this.hashCode()) 
-        .eternal(true)
-        .entryCapacity(20)
-        .loaderThreadCount(1)
-        .loader((keyPolicyName) -> {
-                LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY, 
-                            "Fetching Key Policy for keyPolicyName(Cache): " + keyPolicyName);
-                return keyPolicyRepository.findByApplicationId(keyPolicyName);
-        })
-        .build();
-        addCertificateThumbprints();
-        addKeyUniqueIdentifier();
+        if (autoUpdate) {
+            LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY, 
+                        "Updating the thumbprint & key unique identifer completed.");
+            keyPolicyCache = new Cache2kBuilder<String, Optional<KeyPolicy>>() {}
+            // added hashcode because test case execution failing with IllegalStateException: Cache already created
+            .name("keyPolicyCache-" + this.hashCode()) 
+            .eternal(true)
+            .entryCapacity(20)
+            .loaderThreadCount(1)
+            .loader((keyPolicyName) -> {
+                    LOGGER.info(KeymanagerConstant.SESSIONID, KeymanagerConstant.EMPTY, KeymanagerConstant.EMPTY, 
+                                "Fetching Key Policy for keyPolicyName(Cache): " + keyPolicyName);
+                    return keyPolicyRepository.findByApplicationId(keyPolicyName);
+            })
+            .build();
+            addCertificateThumbprints();
+            addKeyUniqueIdentifier();
+        }
     }
     
     /**
