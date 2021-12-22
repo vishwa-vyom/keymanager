@@ -39,5 +39,7 @@ public class CryptomanagerConstant {
 	public static final String ENCRYPT_PIN = "CryptoManagerEncryptWithPin";
 
 	public static final String DECRYPT_PIN = "CryptoManagerDecryptWithPin";
+
+	public static final String NOT_APPLICABLE = "NA";
 }
 

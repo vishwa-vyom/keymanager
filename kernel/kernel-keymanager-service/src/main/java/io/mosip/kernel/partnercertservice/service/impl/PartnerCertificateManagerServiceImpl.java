@@ -48,6 +48,7 @@ import io.mosip.kernel.core.keymanager.spi.KeyStore;
 import io.mosip.kernel.core.logger.spi.Logger;
 import io.mosip.kernel.core.util.CryptoUtil;
 import io.mosip.kernel.core.util.DateUtils;
+import io.mosip.kernel.cryptomanager.util.CryptomanagerUtils;
 import io.mosip.kernel.keymanagerservice.exception.KeymanagerServiceException;
 import io.mosip.kernel.keymanager.hsm.util.CertificateUtility;
 import io.mosip.kernel.keymanagerservice.dto.SignatureCertificate;
@@ -131,6 +132,9 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
     private KeymanagerService keymanagerService;
     
     private Cache<String, Object> caCertTrustStore = null;
+    
+    @Autowired
+    CryptomanagerUtils cryptomanagerUtil;
 
     @PostConstruct
     public void init() {
@@ -506,7 +510,14 @@ public class PartnerCertificateManagerServiceImpl implements PartnerCertificateM
 
         LOGGER.info(PartnerCertManagerConstants.SESSIONID, PartnerCertManagerConstants.UPLOAD_PARTNER_CERT, "KeyAlias",
                 "Found Master Key Alias: " + certificateResponse.getAlias());
-                
+        
+        boolean hasAcccess = cryptomanagerUtil.hasKeyAccess(masterSignKeyAppId);
+        if (!hasAcccess) {
+                LOGGER.error(PartnerCertManagerConstants.SESSIONID, PartnerCertManagerConstants.UPLOAD_PARTNER_CERT, PartnerCertManagerConstants.EMPTY,
+                        "Signing Certifiate is not allowed for the authenticated user for the provided application id.");
+                throw new PartnerCertManagerException(PartnerCertManagerErrorConstants.SIGN_CERT_NOT_ALLOWED.getErrorCode(),
+                        PartnerCertManagerErrorConstants.SIGN_CERT_NOT_ALLOWED.getErrorMessage());
+        }
         PrivateKey signPrivateKey = certificateResponse.getCertificateEntry().getPrivateKey();
         X509Certificate signCert = certificateResponse.getCertificateEntry().getChain()[0];
         X500Principal signerPrincipal = signCert.getSubjectX500Principal();

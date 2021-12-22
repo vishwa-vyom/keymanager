@@ -12,7 +12,11 @@ import java.security.cert.CertificateEncodingException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -22,8 +26,10 @@ import org.bouncycastle.util.encoders.Hex;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
+import io.mosip.kernel.core.authmanager.authadapter.model.AuthUserDetails;
 import io.mosip.kernel.core.exception.ParseException;
 import io.mosip.kernel.core.logger.spi.Logger;
 import io.mosip.kernel.core.util.CryptoUtil;
@@ -32,6 +38,8 @@ import io.mosip.kernel.cryptomanager.constant.CryptomanagerErrorCode;
 import io.mosip.kernel.cryptomanager.dto.CryptomanagerRequestDto;
 import io.mosip.kernel.cryptomanager.exception.CryptoManagerSerivceException;
 import io.mosip.kernel.keymanagerservice.dto.SymmetricKeyRequestDto;
+import io.mosip.kernel.keymanagerservice.entity.KeyPolicy;
+import io.mosip.kernel.keymanagerservice.helper.KeymanagerDBHelper;
 import io.mosip.kernel.keymanagerservice.logger.KeymanagerLogger;
 import io.mosip.kernel.keymanagerservice.service.KeymanagerService;
 import io.mosip.kernel.keymanagerservice.util.KeymanagerUtil;
@@ -71,6 +79,9 @@ public class CryptomanagerUtils {
 
 	@Autowired
 	private KeymanagerUtil keymanagerUtil;
+
+	@Autowired
+	private KeymanagerDBHelper dbHelper;
 
 	/**
 	 * Calls Key-Manager-Service to get public key of an application.
@@ -237,6 +248,34 @@ public class CryptomanagerUtils {
 			LOGGER.debug(CryptomanagerConstant.SESSIONID, CryptomanagerConstant.ENCRYPT, "", 
 				"Error Decoding Base64 URL Safe data, trying with Base64 normal decode.");
 		}
-		return CryptoUtil.decodePlainBase64(anyBase64EncodedData);
+		try {
+			return CryptoUtil.decodePlainBase64(anyBase64EncodedData);
+		} catch(Exception exception) {
+			LOGGER.error(CryptomanagerConstant.SESSIONID, CryptomanagerConstant.ENCRYPT, "", 
+				"Error Decoding Base64 normal decode, throwing Exception.", exception);
+			throw new CryptoManagerSerivceException(CryptomanagerErrorCode.INVALID_DATA.getErrorCode(),
+				CryptomanagerErrorCode.INVALID_DATA.getErrorMessage());
+		}
 	}
+
+	public boolean hasKeyAccess(String applicationId) {
+		Optional<KeyPolicy> keyPolicy = dbHelper.getKeyPolicyFromCache(applicationId);
+		if(!keyPolicy.isPresent()) // not allowing decryption if not key policy found
+			return false;
+
+		String accessAllowed = keyPolicy.get().getAccessAllowed(); 
+		if (Objects.isNull(accessAllowed) || accessAllowed.isEmpty()) {
+			return false;
+		}
+
+		if (accessAllowed.equals(CryptomanagerConstant.NOT_APPLICABLE)) 
+			return true; // allowing decryption because key policy is configured as not applicable
+		
+		AuthUserDetails userDetail = (AuthUserDetails) SecurityContextHolder.getContext().getAuthentication()
+														.getPrincipal();
+		List<String> allowedList = Stream.of(accessAllowed.split(",")).map(allowed -> allowed.trim()).collect(Collectors.toList());
+		String preferredUserName = userDetail.getUsername();
+		return allowedList.stream().anyMatch(preferredUserName::equalsIgnoreCase);
+	}
+	
 }

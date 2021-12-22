@@ -26,7 +26,6 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
-import java.util.List;
 import java.util.Objects;
 
 import javax.crypto.SecretKey;
@@ -35,6 +34,7 @@ import javax.security.auth.DestroyFailedException;
 import javax.security.auth.x500.X500Principal;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.x500.RDN;
@@ -42,14 +42,15 @@ import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
-import org.bouncycastle.util.io.pem.PemObject;
-import org.bouncycastle.util.io.pem.PemReader;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.bouncycastle.pkcs.PKCS10CertificationRequestBuilder;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder;
+import org.bouncycastle.util.encoders.Hex;
+import org.bouncycastle.util.io.pem.PemObject;
+import org.bouncycastle.util.io.pem.PemReader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -58,6 +59,7 @@ import io.mosip.kernel.core.crypto.spi.CryptoCoreSpec;
 import io.mosip.kernel.core.keymanager.exception.KeystoreProcessingException;
 import io.mosip.kernel.core.keymanager.model.CertificateEntry;
 import io.mosip.kernel.core.keymanager.model.CertificateParameters;
+import io.mosip.kernel.core.logger.spi.Logger;
 import io.mosip.kernel.core.util.CryptoUtil;
 import io.mosip.kernel.core.util.DateUtils;
 import io.mosip.kernel.keygenerator.bouncycastle.KeyGenerator;
@@ -70,7 +72,6 @@ import io.mosip.kernel.keymanagerservice.entity.BaseEntity;
 import io.mosip.kernel.keymanagerservice.entity.KeyAlias;
 import io.mosip.kernel.keymanagerservice.exception.KeymanagerServiceException;
 import io.mosip.kernel.keymanagerservice.logger.KeymanagerLogger;
-import io.mosip.kernel.core.logger.spi.Logger;
 /**
  * Utility class for Keymanager
  * 
@@ -164,10 +165,10 @@ public class KeymanagerUtil {
 	 * @param keyAlias  keyAlias
 	 * @return true if timestamp is valid, else false
 	 */
-	public boolean isValidTimestamp(LocalDateTime timeStamp, KeyAlias keyAlias) {
+	public boolean isValidTimestamp(LocalDateTime timeStamp, KeyAlias keyAlias, int preExpireDays) {
 		return timeStamp.isEqual(keyAlias.getKeyGenerationTime()) || timeStamp.isEqual(keyAlias.getKeyExpiryTime())
 				|| (timeStamp.isAfter(keyAlias.getKeyGenerationTime())
-						&& timeStamp.isBefore(keyAlias.getKeyExpiryTime()));
+						&& timeStamp.isBefore(keyAlias.getKeyExpiryTime().minusDays(preExpireDays)));
 	}
 
 	/**
@@ -462,5 +463,9 @@ public class KeymanagerUtil {
 		ZonedDateTime zonedtime = ldTime.atZone(ZoneId.systemDefault());
         ZonedDateTime converted = zonedtime.withZoneSameInstant(ZoneOffset.UTC);
         return converted.toLocalDateTime();
+	}
+
+	public String getUniqueIdentifier(String inputStr) {
+		return Hex.toHexString(DigestUtils.sha1(inputStr)).toUpperCase();
 	}
 }
