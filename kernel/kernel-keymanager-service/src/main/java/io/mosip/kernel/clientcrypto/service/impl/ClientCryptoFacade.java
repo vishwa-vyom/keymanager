@@ -45,6 +45,9 @@ public class ClientCryptoFacade {
     @Value("${mosip.kernel.client.crypto.use-resident-service-module-key:false}")
     private Boolean useResidentServiceModuleKey;
 
+    @Value("${mosip.kernel.client.crypto.resident-service-app-id:RESIDENT}")
+    private String residentServiceAppId;
+
     @Value("${mosip.kernel.client.crypto.iv-length:12}")
     private int ivLength;
 
@@ -76,7 +79,7 @@ public class ClientCryptoFacade {
                 LOGGER.warn(ClientCryptoManagerConstant.SESSIONID, ClientCryptoManagerConstant.INITIALIZATION, ClientCryptoManagerConstant.EMPTY,
                         "USING LOCAL CLIENT SECURITY INITIALIZED, IGNORE IF THIS IS NON-PROD ENV");
                 clientCryptoService = new LocalClientCryptoServiceImpl(cryptoCore, keymanagerService,
-                    useResidentServiceModuleKey);
+                    useResidentServiceModuleKey, residentServiceAppId);
             } catch (Throwable ex) {
                 LOGGER.error(ClientCryptoManagerConstant.SESSIONID, ClientCryptoManagerConstant.INITIALIZATION,
                         ClientCryptoManagerConstant.EMPTY, ExceptionUtils.getStackTrace(ex));

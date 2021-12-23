@@ -21,6 +21,4 @@ public interface ClientCryptoManagerConstant {
 
     String ENABLED = "Y";
     String DISABLED = "N";
-
-    String RESIDENT_MODULE_APP_ID = "RESIDENT";
 }

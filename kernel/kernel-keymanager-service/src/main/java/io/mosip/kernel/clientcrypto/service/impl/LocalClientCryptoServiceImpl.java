@@ -55,6 +55,7 @@ class LocalClientCryptoServiceImpl implements ClientCryptoService {
     protected static CryptoCoreSpec<byte[], byte[], SecretKey, PublicKey, PrivateKey, String> cryptoCore;
     private KeymanagerService keymanagerService;
     private Boolean useResidentServiceModuleKey;
+    private String residentServiceAppId;
 
 
     /**
@@ -63,7 +64,7 @@ class LocalClientCryptoServiceImpl implements ClientCryptoService {
      * @throws Throwable
      */
     LocalClientCryptoServiceImpl(@NotNull CryptoCoreSpec<byte[], byte[], SecretKey, PublicKey, PrivateKey, String> cryptoCoreImpl, 
-            @NotNull KeymanagerService keymanagerServiceImpl, Boolean useResidentServiceModuleKey)
+            @NotNull KeymanagerService keymanagerServiceImpl, Boolean useResidentServiceModuleKey, String residentServiceAppId)
             throws  Throwable {
         LOGGER.info(ClientCryptoManagerConstant.SESSIONID, ClientCryptoManagerConstant.NON_TPM,
                 ClientCryptoManagerConstant.EMPTY, "Getting the instance of NON_TPM Security");
@@ -93,6 +94,7 @@ class LocalClientCryptoServiceImpl implements ClientCryptoService {
         cryptoCore = cryptoCoreImpl;
         keymanagerService = keymanagerServiceImpl;
         this.useResidentServiceModuleKey = useResidentServiceModuleKey;
+        this.residentServiceAppId = residentServiceAppId;
     }
 
     @Override
@@ -296,8 +298,7 @@ class LocalClientCryptoServiceImpl implements ClientCryptoService {
 
     private CertificateEntry<X509Certificate, PrivateKey> getResidentCertificateEntry() {
         SignatureCertificate certificateResponse = keymanagerService.getSignatureCertificate(
-            ClientCryptoManagerConstant.RESIDENT_MODULE_APP_ID, Optional.empty(), 
-            DateUtils.getUTCCurrentDateTimeString());
+            residentServiceAppId, Optional.empty(), DateUtils.getUTCCurrentDateTimeString());
         return certificateResponse.getCertificateEntry();
     }
 
