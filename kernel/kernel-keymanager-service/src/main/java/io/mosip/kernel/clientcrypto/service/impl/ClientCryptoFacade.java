@@ -8,6 +8,7 @@ import io.mosip.kernel.core.crypto.spi.CryptoCoreSpec;
 import io.mosip.kernel.core.exception.ExceptionUtils;
 import io.mosip.kernel.core.logger.spi.Logger;
 import io.mosip.kernel.keymanagerservice.logger.KeymanagerLogger;
+import io.mosip.kernel.keymanagerservice.service.KeymanagerService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,6 +38,12 @@ public class ClientCryptoFacade {
 
     @Autowired
     private Environment environment;
+
+    @Autowired
+    private KeymanagerService keymanagerService;
+
+    @Value("${mosip.kernel.client.crypto.use-resident-service-module-key:false}")
+    private Boolean useResidentServiceModuleKey;
 
     @Value("${mosip.kernel.client.crypto.iv-length:12}")
     private int ivLength;
@@ -68,7 +75,8 @@ public class ClientCryptoFacade {
             try {
                 LOGGER.warn(ClientCryptoManagerConstant.SESSIONID, ClientCryptoManagerConstant.INITIALIZATION, ClientCryptoManagerConstant.EMPTY,
                         "USING LOCAL CLIENT SECURITY INITIALIZED, IGNORE IF THIS IS NON-PROD ENV");
-                clientCryptoService = new LocalClientCryptoServiceImpl(cryptoCore);
+                clientCryptoService = new LocalClientCryptoServiceImpl(cryptoCore, keymanagerService,
+                    useResidentServiceModuleKey);
             } catch (Throwable ex) {
                 LOGGER.error(ClientCryptoManagerConstant.SESSIONID, ClientCryptoManagerConstant.INITIALIZATION,
                         ClientCryptoManagerConstant.EMPTY, ExceptionUtils.getStackTrace(ex));
